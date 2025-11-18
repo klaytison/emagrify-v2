@@ -7,7 +7,7 @@
 
 export const ADMIN_CONFIG = {
   // 🔐 ALTERE ESTE EMAIL PARA O SEU
-  adminEmail: 'seu-email@exemplo.com',
+  adminEmail: 'klaytsa3@gmail.com',
   
   // Configurações do painel
   itemsPorPagina: 20,
