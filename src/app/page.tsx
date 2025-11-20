@@ -127,27 +127,6 @@ export default function Home() {
     </div>
   </div>
 
-  {/* ANIMAÇÕES */}
-  <style jsx>{`
-    @keyframes fadeSlideUp {
-      0% {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      100% {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .animate-fadeSlideUp {
-      animation: fadeSlideUp 0.8s ease forwards;
-    }
-
-    .delay-200 {
-      animation-delay: 0.2s;
-    }
-  `}</style>
 </section>
 {/* === REAL RESULTS SECTION (PASSO 3) === */}
 <section className="py-20 bg-white dark:bg-gray-900 transition-colors duration-300">
@@ -271,65 +250,83 @@ export default function Home() {
         </DialogContent>
       </Dialog>
 
-      {/* === AJUSTE FINAL — SUAVIZAÇÃO DE TRANSIÇÕES & MELHORIAS GERAIS === */}
-      <style jsx global>{`
-        html,
-        body {
-          scroll-behavior: smooth;
-        }
+     <style jsx global>{`
+  /* GLOBAL SMOOTH SCROLL */
+  html, body {
+    scroll-behavior: smooth;
+  }
 
-        .btn-premium {
-          transition: all 0.25s ease-in-out;
-        }
+  /* Animation fadeSlideUp */
+  @keyframes fadeSlideUp {
+    0% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 
-        .btn-premium:hover {
-          transform: scale(1.03);
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-        }
+  .animate-fadeSlideUp {
+    animation: fadeSlideUp 0.8s ease forwards;
+  }
 
-        .fade-smooth {
-          opacity: 0;
-          transform: translateY(20px);
-          animation: smoothFade 0.8s forwards;
-        }
+  .delay-200 {
+    animation-delay: 0.2s;
+  }
 
-        @keyframes smoothFade {
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
+  /* Buttons premium */
+  .btn-premium {
+    transition: all 0.25s ease-in-out;
+  }
 
-        .card-premium::before {
-          content: "";
-          position: absolute;
-          top: -40px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 120px;
-          height: 120px;
-          background: radial-gradient(circle, rgba(255, 255, 255, 0.35), transparent);
-          filter: blur(25px);
-          z-index: -1;
-        }
+  .btn-premium:hover {
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  }
 
-        h1,
-        h2,
-        h3 {
-          transition: color 0.3s ease;
-        }
+  /* Fade smooth */
+  .fade-smooth {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: smoothFade 0.8s forwards;
+  }
 
-        h1:hover,
-        h2:hover,
-        h3:hover {
-          color: #6ecbf5;
-        }
+  @keyframes smoothFade {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 
-        a,
-        button {
-          transition: 0.25s ease-in-out;
-        }
-      `}</style>
+  /* Glow effect card */
+  .card-premium::before {
+    content: "";
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, rgba(255,255,255,0.35), transparent);
+    filter: blur(25px);
+    z-index: -1;
+  }
+
+  /* Hover titles */
+  h1, h2, h3 {
+    transition: color 0.3s ease;
+  }
+
+  h1:hover, h2:hover, h3:hover {
+    color: #6ECBF5;
+  }
+
+  a, button {
+    transition: 0.25s ease-in-out;
+  }
+`}</style>
     </div>
   );
 }
