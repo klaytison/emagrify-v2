@@ -62,10 +62,19 @@ export default function Home() {
     </div>
 
     {/* CARD PREMIUM */}
-    <div
-      className="max-w-xl mx-auto bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 p-10 text-center 
-      animate-fadeSlideUp delay-200"
-    >
+ <div
+  className={`
+    max-w-xl mx-auto
+    bg-white dark:bg-gray-800
+    rounded-3xl shadow-2xl
+    border border-gray-100 dark:border-gray-700
+    p-10 text-center
+    animate-fadeSlideUp
+    delay-200
+  `}
+>
+
+
       <div className="mb-6">
         <span className="inline-block bg-[#FF7A00]/10 text-[#FF7A00] font-bold text-sm px-4 py-1 rounded-full">
           Plano mais escolhido ⭐
