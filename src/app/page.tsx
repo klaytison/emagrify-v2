@@ -74,7 +74,6 @@ export default function Home() {
   `}
 >
 
-
       <div className="mb-6">
         <span className="inline-block bg-[#FF7A00]/10 text-[#FF7A00] font-bold text-sm px-4 py-1 rounded-full">
           Plano mais escolhido ⭐
