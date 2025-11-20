@@ -329,7 +329,6 @@ export default function Home() {
     transition: 0.25s ease-in-out;
   }
 `}</style>
-
     </div>
   );
 }
