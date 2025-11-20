@@ -39,6 +39,7 @@ export default function Home() {
           </Button>
         </div>
       </section>
+      
 {/* === SEÇÃO PREMIUM — PLANO PRINCIPAL === */}
 <section
   id="premium"
@@ -61,19 +62,69 @@ export default function Home() {
       </p>
     </div>
 
-    {/* CARD PREMIUM */}
- <div
-  className={`
-    max-w-xl mx-auto
-    bg-white dark:bg-gray-800
-    rounded-3xl shadow-2xl
-    border border-gray-100 dark:border-gray-700
-    p-10 text-center
-    animate-fadeSlideUp
-    delay-200
-  `}
->
+    {/* === REAL RESULTS SECTION (PASSO 3) === */}
+<section className="py-20 bg-white dark:bg-gray-900 transition-colors duration-300">
+  <div className="container mx-auto px-6">
+    <div className="text-center mb-14">
+      <span className="inline-block bg-[#7BE4B7]/20 text-[#2A2A2A] dark:text-white px-4 py-1 rounded-full text-sm font-semibold">
+        Resultados Reais
+      </span>
+      <h2 className="text-4xl md:text-5xl font-bold mt-4 text-[#2A2A2A] dark:text-white">
+        Pessoas como você já transformaram suas vidas
+      </h2>
+      <p className="mt-4 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+        Saúde, confiança e autoestima renovadas — veja alguns exemplos reais de usuários que seguiram nossos planos.
+      </p>
+    </div>
 
+    {/* IMAGES GRID */}
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+      
+      {/* CARD 1 */}
+      <div 
+        className="rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+      >
+        <img 
+          src="/results/woman1.webp"
+          alt="Resultado real 1"
+          className="w-full h-80 object-cover"
+        />
+      </div>
+
+      {/* CARD 2 */}
+      <div 
+        className="rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+      >
+        <img 
+          src="/results/woman2.webp"
+          alt="Resultado real 2"
+          className="w-full h-80 object-cover"
+        />
+      </div>
+
+      {/* CARD 3 */}
+      <div 
+        className="rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+      >
+        <img 
+          src="/results/woman3.webp"
+          alt="Resultado real 3"
+          className="w-full h-80 object-cover"
+        />
+      </div>
+    </div>
+
+    <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
+      Resultados reais variam de pessoa para pessoa. O mais importante é começar.
+    </p>
+  </div>
+</section>
+
+    {/* CARD PREMIUM */}
+    <div
+      className="max-w-xl mx-auto bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 p-10 text-center 
+      animate-fadeSlideUp delay-200"
+    >
       <div className="mb-6">
         <span className="inline-block bg-[#FF7A00]/10 text-[#FF7A00] font-bold text-sm px-4 py-1 rounded-full">
           Plano mais escolhido ⭐
@@ -135,63 +186,27 @@ export default function Home() {
     </div>
   </div>
 
-</section>
-{/* === REAL RESULTS SECTION (PASSO 3) === */}
-<section className="py-20 bg-white dark:bg-gray-900 transition-colors duration-300">
-  <div className="container mx-auto px-6">
-    <div className="text-center mb-14">
-      <span className="inline-block bg-[#7BE4B7]/20 text-[#2A2A2A] dark:text-white px-4 py-1 rounded-full text-sm font-semibold">
-        Resultados Reais
-      </span>
-      <h2 className="text-4xl md:text-5xl font-bold mt-4 text-[#2A2A2A] dark:text-white">
-        Pessoas como você já transformaram suas vidas
-      </h2>
-      <p className="mt-4 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-        Saúde, confiança e autoestima renovadas — veja alguns exemplos reais de usuários que seguiram nossos planos.
-      </p>
-    </div>
+  {/* ANIMAÇÕES */}
+  <style jsx>{`
+    @keyframes fadeSlideUp {
+      0% {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
-    {/* IMAGES GRID */}
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
-      
-      {/* CARD 1 */}
-      <div 
-        className="rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-      >
-        <img 
-          src="/results/woman1.webp"
-          alt="Resultado real 1"
-          className="w-full h-80 object-cover"
-        />
-      </div>
+    .animate-fadeSlideUp {
+      animation: fadeSlideUp 0.8s ease forwards;
+    }
 
-      {/* CARD 2 */}
-      <div 
-        className="rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-      >
-        <img 
-          src="/results/woman2.webp"
-          alt="Resultado real 2"
-          className="w-full h-80 object-cover"
-        />
-      </div>
-
-      {/* CARD 3 */}
-      <div 
-        className="rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-      >
-        <img 
-          src="/results/woman3.webp"
-          alt="Resultado real 3"
-          className="w-full h-80 object-cover"
-        />
-      </div>
-    </div>
-
-    <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
-      Resultados reais variam de pessoa para pessoa. O mais importante é começar.
-    </p>
-  </div>
+    .delay-200 {
+      animation-delay: 0.2s;
+    }
+  `}</style>
 </section>
 
       {/* === SEÇÃO FEATURES (vamos melhorar no Passo 3) === */}
@@ -244,7 +259,7 @@ export default function Home() {
         </div>
       </footer>
 
-           {/* === Contact Dialog === */}
+      {/* === Contact Dialog === */}
       <Dialog open={showContactDialog} onOpenChange={setShowContactDialog}>
         <DialogContent className="sm:max-w-md dark:bg-gray-800">
           <DialogHeader>
@@ -257,34 +272,14 @@ export default function Home() {
           </DialogHeader>
         </DialogContent>
       </Dialog>
-
-     <style jsx global>{`
-  /* GLOBAL SMOOTH SCROLL */
+      {/* === AJUSTE FINAL — SUAVIZAÇÃO DE TRANSIÇÕES & MELHORIAS GERAIS === */}
+<style jsx global>{`
+  /* Suavização global */
   html, body {
     scroll-behavior: smooth;
   }
 
-  /* Animation fadeSlideUp */
-  @keyframes fadeSlideUp {
-    0% {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    100% {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .animate-fadeSlideUp {
-    animation: fadeSlideUp 0.8s ease forwards;
-  }
-
-  .delay-200 {
-    animation-delay: 0.2s;
-  }
-
-  /* Buttons premium */
+  /* Brilho suave no hover do botão */
   .btn-premium {
     transition: all 0.25s ease-in-out;
   }
@@ -294,7 +289,7 @@ export default function Home() {
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
   }
 
-  /* Fade smooth */
+  /* Fade reveal global (caso queira aplicar em outros elementos no futuro) */
   .fade-smooth {
     opacity: 0;
     transform: translateY(20px);
@@ -308,7 +303,7 @@ export default function Home() {
     }
   }
 
-  /* Glow effect card */
+  /* Pequeno brilho no topo do card premium */
   .card-premium::before {
     content: "";
     position: absolute;
@@ -322,7 +317,7 @@ export default function Home() {
     z-index: -1;
   }
 
-  /* Hover titles */
+  /* Efeito suave nos títulos */
   h1, h2, h3 {
     transition: color 0.3s ease;
   }
@@ -331,6 +326,7 @@ export default function Home() {
     color: #6ECBF5;
   }
 
+  /* Transição geral para elementos interativos */
   a, button {
     transition: 0.25s ease-in-out;
   }
@@ -338,4 +334,3 @@ export default function Home() {
     </div>
   );
 }
-
