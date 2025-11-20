@@ -1,16 +1,34 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 export async function GET() {
-  // Mock data - replace with real database queries
-  const users = Array.from({ length: 50 }, (_, i) => ({
-    id: String(i + 1),
-    name: `Usuário ${i + 1}`,
-    email: `usuario${i + 1}@example.com`,
-    plan: ['Mensal', 'Trimestral', 'Anual'][Math.floor(Math.random() * 3)],
-    status: ['active', 'canceled', 'pending'][Math.floor(Math.random() * 3)] as 'active' | 'canceled' | 'pending',
-    createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-    nextRenewal: new Date(Date.now() + Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(),
-  }));
+  // Pegando variáveis seguras do servidor
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  return NextResponse.json({ users });
+  if (!supabaseUrl || !serviceRole) {
+    return NextResponse.json(
+      { error: "Supabase config missing" },
+      { status: 500 }
+    );
+  }
+
+  // Cliente administrativo (NUNCA exposto no frontend)
+  const supabaseAdmin = createClient(supabaseUrl, serviceRole);
+
+  // Listar usuários
+  const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+    page: 1,
+    perPage: 200,
+  });
+
+  if (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Failed to fetch users" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ users: data.users });
 }
