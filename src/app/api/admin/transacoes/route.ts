@@ -1,33 +1,61 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getTransacoes } from '@/lib/actions/admin';
+import { createClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const filtro = {
-      tipo: searchParams.get('tipo') || undefined,
-      mesAno: searchParams.get('mesAno') || undefined,
-      userId: searchParams.get('userId') || undefined,
-    };
+const ADMIN_EMAIL = 'klaytsa3@gmail.com';
 
-    // Filtro por data
-    const dataInicio = searchParams.get('dataInicio');
-    const dataFim = searchParams.get('dataFim');
+async function checkAdmin(supabase: any) {
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  if (error || !user || user.email !== ADMIN_EMAIL) {
+    return null;
+  }
+  
+  return user;
+}
 
-    let transacoes = await getTransacoes(filtro);
+export async function GET(request: Request) {
+  const supabase = await createClient();
+  const admin = await checkAdmin(supabase);
+  
+  if (!admin) {
+    return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+  }
 
-    // Filtrar por período se fornecido
-    if (dataInicio || dataFim) {
-      transacoes = transacoes.filter(t => {
-        const dataTransacao = new Date(t.data);
-        if (dataInicio && dataTransacao < new Date(dataInicio)) return false;
-        if (dataFim && dataTransacao > new Date(dataFim)) return false;
-        return true;
-      });
-    }
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get('user_id');
+  const mes = searchParams.get('mes');
+  const tipo = searchParams.get('tipo');
 
-    return NextResponse.json(transacoes);
-  } catch (error: any) {
+  let query = supabase
+    .from('transacoes_assinatura')
+    .select(`
+      *,
+      profiles!transacoes_assinatura_user_id_fkey (
+        email,
+        nome
+      )
+    `);
+
+  if (userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  if (mes) {
+    const [ano, mesNum] = mes.split('-');
+    const dataInicio = new Date(parseInt(ano), parseInt(mesNum) - 1, 1);
+    const dataFim = new Date(parseInt(ano), parseInt(mesNum), 0);
+    query = query.gte('data', dataInicio.toISOString()).lte('data', dataFim.toISOString());
+  }
+
+  if (tipo) {
+    query = query.eq('tipo', tipo);
+  }
+
+  const { data, error } = await query.order('data', { ascending: false });
+
+  if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  return NextResponse.json(data);
 }

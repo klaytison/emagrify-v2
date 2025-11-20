@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+const ADMIN_EMAIL = 'klaytsa3@gmail.com'
+
 export async function signUp(formData: FormData) {
   const supabase = await createClient()
 
@@ -20,7 +22,6 @@ export async function signUp(formData: FormData) {
   }
 
   if (authData.user) {
-    // Criar perfil
     const { error: profileError } = await supabase
       .from('usuarios_perfil')
       .insert({
@@ -32,7 +33,6 @@ export async function signUp(formData: FormData) {
       console.error('Erro ao criar perfil:', profileError)
     }
 
-    // Registrar no histórico
     await supabase.from('historico_acao').insert({
       user_id: authData.user.id,
       tipo: 'cadastro',
@@ -62,7 +62,6 @@ export async function signIn(formData: FormData) {
   }
 
   if (data.user) {
-    // Registrar login no histórico
     await supabase.from('historico_acao').insert({
       user_id: data.user.id,
       tipo: 'login',
@@ -70,7 +69,12 @@ export async function signIn(formData: FormData) {
     })
 
     revalidatePath('/', 'layout')
-    return { success: true }
+    
+    if (data.user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+      return { success: true, redirect: '/admin' }
+    }
+    
+    return { success: true, redirect: '/' }
   }
 
   return { error: 'Erro ao fazer login' }
@@ -82,7 +86,6 @@ export async function signOut() {
   const { data: { user } } = await supabase.auth.getUser()
   
   if (user) {
-    // Registrar logout no histórico
     await supabase.from('historico_acao').insert({
       user_id: user.id,
       tipo: 'logout',
@@ -124,7 +127,6 @@ export async function updatePassword(formData: FormData) {
   }
 
   if (user) {
-    // Registrar no histórico
     await supabase.from('historico_acao').insert({
       user_id: user.id,
       tipo: 'senha_alterada',

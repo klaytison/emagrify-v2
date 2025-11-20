@@ -1,95 +1,159 @@
-import { createServerClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
-import { isAdmin } from '@/lib/config/admin';
-import Link from 'next/link';
-import { 
-  LayoutDashboard, 
-  Users, 
-  CreditCard, 
-  FileText, 
-  Package,
-  LogOut,
-  Menu
-} from 'lucide-react';
+'use client';
 
-export default async function AdminLayout({
+import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  LayoutDashboard,
+  Users,
+  CreditCard,
+  FileText,
+  Ticket,
+  Settings,
+  Shield,
+  UserCog,
+  Zap,
+  Menu,
+  X,
+  Bell,
+  LogOut,
+  DollarSign,
+} from 'lucide-react';
+import { ErrorBoundary } from '@/components/admin/ErrorBoundary';
+
+const menuItems = [
+  { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/users', label: 'Usuários', icon: Users },
+  { href: '/admin/subscriptions', label: 'Assinaturas', icon: CreditCard },
+  { href: '/admin/payments', label: 'Pagamentos', icon: DollarSign },
+  { href: '/admin/content', label: 'Conteúdo', icon: FileText },
+  { href: '/admin/coupons', label: 'Cupons', icon: Ticket },
+  { href: '/admin/support', label: 'Suporte', icon: Ticket },
+  { href: '/admin/settings', label: 'Configurações', icon: Settings },
+  { href: '/admin/security', label: 'Segurança', icon: Shield },
+  { href: '/admin/roles', label: 'Permissões', icon: UserCog },
+  { href: '/admin/automations', label: 'Automações', icon: Zap },
+];
+
+export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user || !isAdmin(user.email)) {
-    redirect('/');
-  }
-
-  const navigation = [
-    { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { name: 'Assinaturas', href: '/admin/assinaturas', icon: CreditCard },
-    { name: 'Usuários', href: '/admin/usuarios', icon: Users },
-    { name: 'Relatórios', href: '/admin/relatorios', icon: FileText },
-    { name: 'Planos', href: '/admin/planos', icon: Package },
-  ];
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Header */}
-      <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <LayoutDashboard className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-                  Painel Admin
-                </h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {user.email}
-                </p>
-              </div>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+        {/* Mobile sidebar backdrop */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Sidebar */}
+        <aside
+          className={`fixed top-0 left-0 z-50 h-full w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className="flex flex-col h-full">
+            {/* Logo */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
+              <Link href="/admin/dashboard" className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-[#7BE4B7] to-[#6ECBF5] rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">E</span>
+                </div>
+                <span className="text-xl font-bold text-slate-900 dark:text-white">
+                  Emagrify
+                </span>
+              </Link>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="lg:hidden text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
 
-            <Link
-              href="/painel"
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Voltar ao Site
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar */}
-          <aside className="lg:w-64 flex-shrink-0">
-            <nav className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 p-4">
-              <ul className="space-y-2">
-                {navigation.map((item) => (
-                  <li key={item.name}>
-                    <Link
-                      href={item.href}
-                      className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all duration-200 hover:scale-105"
-                    >
-                      <item.icon className="w-5 h-5" />
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
+            {/* Navigation */}
+            <nav className="flex-1 overflow-y-auto p-4">
+              <ul className="space-y-1">
+                {menuItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href;
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={() => setSidebarOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                          isActive
+                            ? 'bg-gradient-to-r from-[#7BE4B7] to-[#6ECBF5] text-white shadow-lg'
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                        }`}
+                      >
+                        <Icon className="w-5 h-5" />
+                        <span className="font-medium">{item.label}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </nav>
-          </aside>
 
-          {/* Main Content */}
-          <main className="flex-1">
-            {children}
+            {/* User info */}
+            <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-[#FF7A00] to-[#7BE4B7] rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold">A</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">
+                    Admin
+                  </p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    admin@emagrify.com
+                  </p>
+                </div>
+                <button className="text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400">
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main content */}
+        <div className="lg:pl-64">
+          {/* Header */}
+          <header className="sticky top-0 z-30 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between px-6 py-4">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+
+              <div className="flex items-center gap-4 ml-auto">
+                <button className="relative p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Page content */}
+          <main className="p-6">
+            <ErrorBoundary>{children}</ErrorBoundary>
           </main>
         </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

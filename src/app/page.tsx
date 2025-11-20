@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import Header from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -424,35 +425,12 @@ const menopauseQuestions = [
 
 export default function Home() {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showContactDialog, setShowContactDialog] = useState(false);
   const [showAllTestimonials, setShowAllTestimonials] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [showMenopauseDialog, setShowMenopauseDialog] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [showResults, setShowResults] = useState(false);
   const [answers, setAnswers] = useState<Record<number, string>>({});
-
-  // Carregar preferência de tema do localStorage
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-      setIsDarkMode(true);
-      document.documentElement.classList.add('dark');
-    }
-  }, []);
-
-  // Função para alternar tema
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    if (!isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  };
 
   const displayedTestimonials = showAllTestimonials ? allTestimonials : allTestimonials.slice(0, 3);
 
@@ -516,136 +494,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
-      {/* Header/Navbar */}
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
-        <nav className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <button onClick={() => handleNavigation('/')} className="flex items-center gap-2 cursor-pointer">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#7BE4B7] to-[#6ECBF5] flex items-center justify-center">
-                <Heart className="w-6 h-6 text-white" fill="white" />
-              </div>
-              <span className="text-2xl font-bold text-[#2A2A2A] dark:text-white">Emagrify</span>
-            </button>
-            
-            <div className="hidden md:flex items-center gap-6">
-              <button 
-                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-                className="text-[#2A2A2A] dark:text-gray-300 hover:text-[#7BE4B7] transition-colors"
-              >
-                Funcionalidades
-              </button>
-              <button 
-                onClick={() => document.getElementById('testimonials')?.scrollIntoView({ behavior: 'smooth' })}
-                className="text-[#2A2A2A] dark:text-gray-300 hover:text-[#7BE4B7] transition-colors"
-              >
-                Depoimentos
-              </button>
-              <button 
-                onClick={() => handleNavigation('/receitas')}
-                className="text-[#2A2A2A] dark:text-gray-300 hover:text-[#7BE4B7] transition-colors"
-              >
-                Receitas Grátis
-              </button>
-              <button 
-                onClick={() => document.getElementById('news')?.scrollIntoView({ behavior: 'smooth' })}
-                className="text-[#2A2A2A] dark:text-gray-300 hover:text-[#7BE4B7] transition-colors"
-              >
-                Notícias
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {/* Botão de Trocar Tema */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleTheme}
-                className="text-[#2A2A2A] dark:text-gray-300 hover:text-[#7BE4B7] hover:bg-[#7BE4B7]/10 transition-all"
-                aria-label="Alternar tema"
-              >
-                {isDarkMode ? (
-                  <Sun className="w-5 h-5" />
-                ) : (
-                  <Moon className="w-5 h-5" />
-                )}
-              </Button>
-
-              <Button 
-                variant="ghost" 
-                className="text-[#2A2A2A] dark:text-gray-300 hidden md:inline-flex"
-                onClick={() => handleNavigation('/login')}
-              >
-                Entrar
-              </Button>
-              <Button 
-                className="bg-gradient-to-r from-[#7BE4B7] to-[#6ECBF5] text-white hover:opacity-90 transition-opacity"
-                onClick={() => handleNavigation('/checkout')}
-              >
-                Assinar Agora
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              >
-                {mobileMenuOpen ? <X /> : <Menu />}
-              </Button>
-            </div>
-          </div>
-
-          {/* Mobile Menu */}
-          {mobileMenuOpen && (
-            <div className="md:hidden mt-4 pb-4 space-y-2">
-              <button 
-                onClick={() => {
-                  document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
-                  setMobileMenuOpen(false);
-                }}
-                className="block w-full text-left py-2 text-[#2A2A2A] dark:text-gray-300 hover:text-[#7BE4B7]"
-              >
-                Funcionalidades
-              </button>
-              <button 
-                onClick={() => {
-                  document.getElementById('testimonials')?.scrollIntoView({ behavior: 'smooth' });
-                  setMobileMenuOpen(false);
-                }}
-                className="block w-full text-left py-2 text-[#2A2A2A] dark:text-gray-300 hover:text-[#7BE4B7]"
-              >
-                Depoimentos
-              </button>
-              <button 
-                onClick={() => {
-                  handleNavigation('/receitas');
-                  setMobileMenuOpen(false);
-                }}
-                className="block w-full text-left py-2 text-[#2A2A2A] dark:text-gray-300 hover:text-[#7BE4B7]"
-              >
-                Receitas Grátis
-              </button>
-              <button 
-                onClick={() => {
-                  document.getElementById('news')?.scrollIntoView({ behavior: 'smooth' });
-                  setMobileMenuOpen(false);
-                }}
-                className="block w-full text-left py-2 text-[#2A2A2A] dark:text-gray-300 hover:text-[#7BE4B7]"
-              >
-                Notícias
-              </button>
-              <button 
-                onClick={() => {
-                  handleNavigation('/login');
-                  setMobileMenuOpen(false);
-                }}
-                className="block w-full text-left py-2 text-[#2A2A2A] dark:text-gray-300 hover:text-[#7BE4B7]"
-              >
-                Entrar
-              </button>
-            </div>
-          )}
-        </nav>
-      </header>
+      <Header />
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[#7BE4B7]/10 via-white dark:via-gray-900 to-[#6ECBF5]/10 py-12 md:py-32 transition-colors duration-300">

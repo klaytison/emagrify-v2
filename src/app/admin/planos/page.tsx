@@ -7,7 +7,7 @@ export default function PlanosPage() {
   const [planos, setPlanos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editando, setEditando] = useState<string | null>(null);
-  const [novoPlan o, setNovoPlano] = useState({
+  const [novoPlano, setNovoPlano] = useState({
     nome: '',
     descricao: '',
     valorMensal: '',

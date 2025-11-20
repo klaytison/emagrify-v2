@@ -1,16 +1,46 @@
-import { getProfile } from '@/lib/actions/profile'
-import { getHistory } from '@/lib/actions/history'
-import { redirect } from 'next/navigation'
-import ProfileClient from './profile-client'
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import ProfileClient from './profile-client';
 
 export default async function PerfilPage() {
-  const profile = await getProfile()
+  const supabase = await createClient();
   
-  if (!profile) {
-    redirect('/login')
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  if (error || !user) {
+    redirect('/login');
   }
 
-  const history = await getHistory()
+  // Buscar ou criar perfil
+  let { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
 
-  return <ProfileClient profile={profile} history={history} />
+  if (!profile) {
+    const { data: newProfile } = await supabase
+      .from('profiles')
+      .insert({
+        id: user.id,
+        email: user.email,
+        nome: user.user_metadata?.nome || '',
+        biografia: '',
+        avatar_url: ''
+      })
+      .select()
+      .single();
+    
+    profile = newProfile;
+  }
+
+  // Buscar histórico de atividades (logs relacionados ao usuário)
+  const { data: history } = await supabase
+    .from('transacoes_assinatura')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('data', { ascending: false })
+    .limit(10);
+
+  return <ProfileClient profile={profile} history={history || []} />;
 }

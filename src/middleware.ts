@@ -1,8 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// Email do administrador - ALTERE NO ARQUIVO src/lib/config/admin.ts
-const ADMIN_EMAIL = 'seu-email@exemplo.com'; // Temporário - será lido do config
+const ADMIN_EMAIL = 'klaytsa3@gmail.com'
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -36,16 +35,13 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Proteção de rotas administrativas
   if (request.nextUrl.pathname.startsWith('/admin')) {
     if (!user) {
       const url = request.nextUrl.clone()
       url.pathname = '/login'
-      url.searchParams.set('redirect', request.nextUrl.pathname)
       return NextResponse.redirect(url)
     }
 
-    // Verificar se é administrador
     if (user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
       const url = request.nextUrl.clone()
       url.pathname = '/'
@@ -53,7 +49,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Rotas protegidas normais
   const protectedRoutes = ['/perfil', '/historico', '/painel']
   const isProtectedRoute = protectedRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
@@ -65,10 +60,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Redirecionar usuários autenticados da página de login
   if (request.nextUrl.pathname === '/login' && user) {
     const url = request.nextUrl.clone()
-    url.pathname = '/painel'
+    if (user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+      url.pathname = '/admin'
+    } else {
+      url.pathname = '/'
+    }
     return NextResponse.redirect(url)
   }
 
