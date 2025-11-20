@@ -7,47 +7,59 @@ export default function SubscriptionsPage() {
   const supabase = getSupabaseClient();
 
   const [loading, setLoading] = useState(true);
-  const [subscriptions, setSubscriptions] = useState([]);
+  const [subs, setSubs] = useState([]);
 
   useEffect(() => {
-    async function loadData() {
+    async function load() {
       setLoading(true);
 
-      // EXEMPLO — aqui futuramente você vai buscar assinaturas reais
-      setSubscriptions([
-        { id: 1, email: 'usuario@example.com', status: 'Ativa', plano: 'Mensal' }
-      ]);
+      const { data, error } = await supabase
+        .from("assinaturas")
+        .select(`
+          id,
+          status,
+          data_inicio,
+          data_fim,
+          user_id,
+          profiles ( email )
+        `);
+
+      if (error) {
+        console.error("Erro ao carregar assinaturas:", error);
+        setSubs([]);
+      } else {
+        setSubs(data);
+      }
 
       setLoading(false);
     }
 
-    loadData();
+    load();
   }, []);
 
   return (
-    <div className="min-h-screen p-10 bg-[#F4F4F4] dark:bg-slate-900">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Assinaturas</h1>
+    <div className="min-h-screen p-10 bg-[#0F172A] text-white">
+      <h1 className="text-3xl font-bold mb-6">Assinaturas</h1>
 
-        {loading ? (
-          <p>Carregando...</p>
-        ) : subscriptions.length === 0 ? (
-          <p>Nenhuma assinatura encontrada.</p>
-        ) : (
-          <div className="space-y-4">
-            {subscriptions.map((sub) => (
-              <div
-                key={sub.id}
-                className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow"
-              >
-                <p><strong>Email:</strong> {sub.email}</p>
-                <p><strong>Plano:</strong> {sub.plano}</p>
-                <p><strong>Status:</strong> {sub.status}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {loading ? (
+        <p>Carregando...</p>
+      ) : subs.length === 0 ? (
+        <p>Nenhuma assinatura encontrada.</p>
+      ) : (
+        <div className="space-y-4">
+          {subs.map((s) => (
+            <div
+              key={s.id}
+              className="bg-slate-800 p-6 rounded-xl shadow"
+            >
+              <p><strong>Email:</strong> {s.profiles?.email}</p>
+              <p><strong>Status:</strong> {s.status}</p>
+              <p><strong>Início:</strong> {s.data_inicio ?? "—"}</p>
+              <p><strong>Fim:</strong> {s.data_fim ?? "—"}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
