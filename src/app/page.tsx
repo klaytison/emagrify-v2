@@ -61,9 +61,7 @@ export default function Home() {
           {/* === CARD PREMIUM === */}
           <div
             className={`
-              max-w-xl mx-auto bg-white dark:bg-gray-800 rounded-3xl shadow-2xl
-              border border-gray-100 dark:border-gray-700 p-10 text-center
-              animate-fadeSlideUp delay-200
+              max-w-xl mx-auto bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 p-10 text-center animate-fadeSlideUp delay-200
             `}
           >
             <div className="mb-6">
@@ -94,13 +92,13 @@ export default function Home() {
             </p>
 
             <button
-              onClick={() => (window.location.href = "/checkout")}
-              className="w-full py-4 text-lg font-semibold rounded-xl
-              bg-gradient-to-r from-[#7BE4B7] to-[#6ECBF5]
-              text-white shadow-lg hover:opacity-90 transition-all"
-            >
-              Assinar Agora
-            </button>
+  onClick={() => (window.location.href = "/checkout")}
+  className="w-full py-4 text-lg font-semibold rounded-xl bg-gradient-to-r from-[#7BE4B7] to-[#6ECBF5] text-white shadow-lg hover:opacity-90 transition-all"
+>
+  Assinar Agora
+</button>
+
+
 
             <ul className="mt-10 space-y-3 text-left">
               {[
