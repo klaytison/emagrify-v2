@@ -1,25 +1,23 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { useEffect, useState } from "react";
 
 export default function UsersPage() {
-  const supabase = getSupabaseClient();
-
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<any[]>([]);
 
   useEffect(() => {
     async function loadUsers() {
-      const { data, error } = await supabase.auth.admin.listUsers({
-        page: 1,
-        perPage: 200,
-      });
+      try {
+        const res = await fetch("/api/admin/users");
 
-      if (error) {
-        console.error("Erro ao buscar usuários:", error);
-      } else {
-        setUsers(data.users);
+        const json = await res.json();
+
+        if (json.users) {
+          setUsers(json.users);
+        }
+      } catch (err) {
+        console.error("Erro:", err);
       }
 
       setLoading(false);
@@ -29,23 +27,31 @@ export default function UsersPage() {
   }, []);
 
   return (
-    <div className="p-10">
+    <div className="p-6">
       <h1 className="text-3xl font-bold mb-6">Usuários</h1>
 
       {loading ? (
-        <p>Carregando usuários...</p>
+        <p>Carregando...</p>
       ) : users.length === 0 ? (
         <p>Nenhum usuário encontrado.</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {users.map((user) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {users.map((u) => (
             <div
-              key={user.id}
-              className="bg-white p-6 rounded-xl shadow"
+              key={u.id}
+              className="p-4 bg-white rounded-xl shadow border"
             >
-              <p><strong>Email:</strong> {user.email}</p>
-              <p><strong>ID:</strong> {user.id}</p>
-              <p><strong>Criado em:</strong> {new Date(user.created_at).toLocaleString()}</p>
+              <p className="font-bold text-lg">{u.email}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                ID: {u.id}
+              </p>
+              <p className="text-sm text-gray-500">
+                Criado em:{" "}
+                {u.created_at
+                  ? new Date(u.created_at).toLocaleString()
+                  : "Desconhecido"}
+              </p>
+              <p className="text-green-600 font-semibold mt-2">Ativo</p>
             </div>
           ))}
         </div>
