@@ -257,7 +257,7 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* === Contact Dialog === */}
+           {/* === Contact Dialog === */}
       <Dialog open={showContactDialog} onOpenChange={setShowContactDialog}>
         <DialogContent className="sm:max-w-md dark:bg-gray-800">
           <DialogHeader>
@@ -270,65 +270,67 @@ export default function Home() {
           </DialogHeader>
         </DialogContent>
       </Dialog>
+
       {/* === AJUSTE FINAL — SUAVIZAÇÃO DE TRANSIÇÕES & MELHORIAS GERAIS === */}
-<style jsx global>{`
-  /* Suavização global */
-  html, body {
-    scroll-behavior: smooth;
-  }
+      <style jsx global>{`
+        html,
+        body {
+          scroll-behavior: smooth;
+        }
 
-  /* Brilho suave no hover do botão */
-  .btn-premium {
-    transition: all 0.25s ease-in-out;
-  }
+        .btn-premium {
+          transition: all 0.25s ease-in-out;
+        }
 
-  .btn-premium:hover {
-    transform: scale(1.03);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-  }
+        .btn-premium:hover {
+          transform: scale(1.03);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+        }
 
-  /* Fade reveal global (caso queira aplicar em outros elementos no futuro) */
-  .fade-smooth {
-    opacity: 0;
-    transform: translateY(20px);
-    animation: smoothFade 0.8s forwards;
-  }
+        .fade-smooth {
+          opacity: 0;
+          transform: translateY(20px);
+          animation: smoothFade 0.8s forwards;
+        }
 
-  @keyframes smoothFade {
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
+        @keyframes smoothFade {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
 
-  /* Pequeno brilho no topo do card premium */
-  .card-premium::before {
-    content: "";
-    position: absolute;
-    top: -40px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 120px;
-    height: 120px;
-    background: radial-gradient(circle, rgba(255,255,255,0.35), transparent);
-    filter: blur(25px);
-    z-index: -1;
-  }
+        .card-premium::before {
+          content: "";
+          position: absolute;
+          top: -40px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 120px;
+          height: 120px;
+          background: radial-gradient(circle, rgba(255, 255, 255, 0.35), transparent);
+          filter: blur(25px);
+          z-index: -1;
+        }
 
-  /* Efeito suave nos títulos */
-  h1, h2, h3 {
-    transition: color 0.3s ease;
-  }
+        h1,
+        h2,
+        h3 {
+          transition: color 0.3s ease;
+        }
 
-  h1:hover, h2:hover, h3:hover {
-    color: #6ECBF5;
-  }
+        h1:hover,
+        h2:hover,
+        h3:hover {
+          color: #6ecbf5;
+        }
 
-  /* Transição geral para elementos interativos */
-  a, button {
-    transition: 0.25s ease-in-out;
-  }
-`}</style>
+        a,
+        button {
+          transition: 0.25s ease-in-out;
+        }
+      `}</style>
     </div>
   );
 }
+
