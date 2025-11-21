@@ -1,111 +1,87 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+import { Suspense, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSupabase } from "@/providers/SupabaseProvider";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { toast } from "sonner";
+import { Heart } from "lucide-react";
 
-import { Suspense, useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { useSupabase } from '@/providers/SupabaseProvider'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { toast } from 'sonner'
-import { Heart } from 'lucide-react'
-
-const ADMIN_EMAIL = 'klaytsa3@gmail.com'
-const LOGIN_TIMEOUT = 15000 // 15 segundos
+const ADMIN_EMAIL = "klaytsa3@gmail.com";
+const LOGIN_TIMEOUT = 15000;
 
 function LoginForm() {
-  const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const supabase = createClient()
-  const { supabase } = useSupabase()
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // Limpar listeners ao desmontar
-    return () => {
-      setLoading(false)
-    }
-  }, [])
+  // ✅ Agora usamos SOMENTE o supabase vindo do Provider
+  const { supabase } = useSupabase();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-    const formData = new FormData(e.currentTarget)
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
 
-    // Timeout para evitar loading infinito
     const timeoutId = setTimeout(() => {
-      setLoading(false)
-      setError('Tempo limite excedido. Verifique sua conexão e tente novamente.')
-      toast.error('Erro ao conectar. Tente novamente.')
-    }, LOGIN_TIMEOUT)
+      setLoading(false);
+      setError("Tempo limite excedido.");
+      toast.error("Erro ao conectar");
+    }, LOGIN_TIMEOUT);
 
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+      const { data, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-      clearTimeout(timeoutId)
+      clearTimeout(timeoutId);
 
       if (signInError) {
-        console.error('Erro de autenticação:', signInError)
-        setError(signInError.message || 'Erro ao fazer login')
-        setLoading(false)
-        toast.error('Credenciais inválidas')
-        return
+        setError(signInError.message);
+        setLoading(false);
+        toast.error("Credenciais inválidas");
+        return;
       }
 
       if (data.session && data.user) {
-        // Login bem-sucedido
-        console.log('Login bem-sucedido:', data.user.email)
-        
-        // Registrar no histórico
-        try {
-          await supabase.from('historico_acao').insert({
-            user_id: data.user.id,
-            tipo: 'login',
-            descricao: 'Login realizado',
-          })
-        } catch (histError) {
-          console.error('Erro ao registrar histórico:', histError)
-        }
+        toast.success("Login realizado!");
 
-        // Aguardar um pouco para garantir que a sessão foi salva
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        // Atualizar contexto de autenticação
-        await refreshSession()
-
-        // Aguardar mais um pouco para garantir que o contexto foi atualizado
-        await new Promise(resolve => setTimeout(resolve, 300))
+        // Registrar histórico
+        await supabase.from("historico_acao").insert({
+          user_id: data.user.id,
+          tipo: "login",
+          descricao: "Login realizado",
+        });
 
         // Redirecionar baseado no email
         if (data.user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-          toast.success('Bem-vindo, Admin!')
-          window.location.href = '/admin'
+          window.location.href = "/admin";
         } else {
-          toast.success('Login realizado com sucesso!')
-          window.location.href = '/'
+          window.location.href = "/";
         }
-      } else {
-        setError('Erro ao fazer login. Tente novamente.')
-        setLoading(false)
       }
     } catch (err) {
-      clearTimeout(timeoutId)
-      console.error('Erro inesperado no login:', err)
-      setError('Erro ao conectar com o servidor. Tente novamente.')
-      setLoading(false)
-      toast.error('Erro ao conectar. Tente novamente.')
+      clearTimeout(timeoutId);
+      setError("Erro ao conectar com o servidor.");
+      toast.error("Erro inesperado");
     }
+
+    setLoading(false);
   }
 
   return (
@@ -117,73 +93,50 @@ function LoginForm() {
               <Heart className="w-8 h-8 text-white" fill="white" />
             </div>
           </div>
-          <CardTitle className="text-2xl text-[#2A2A2A] dark:text-white">Login</CardTitle>
-          <CardDescription className="text-gray-600 dark:text-gray-400">Entre com suas credenciais</CardDescription>
+          <CardTitle className="text-2xl text-[#2A2A2A] dark:text-white">
+            Login
+          </CardTitle>
+          <CardDescription className="text-gray-600 dark:text-gray-400">
+            Entre com suas credenciais
+          </CardDescription>
         </CardHeader>
+
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-[#2A2A2A] dark:text-white">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                required
-                placeholder="seu@email.com"
-                disabled={loading}
-                className="border-[#F4F4F4] dark:border-gray-700 bg-white dark:bg-gray-800 text-[#2A2A2A] dark:text-white focus:border-[#7BE4B7] focus:ring-[#7BE4B7]"
-              />
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" name="email" type="email" required disabled={loading} />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-[#2A2A2A] dark:text-white">Senha</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                required
-                placeholder="Sua senha"
-                disabled={loading}
-                className="border-[#F4F4F4] dark:border-gray-700 bg-white dark:bg-gray-800 text-[#2A2A2A] dark:text-white focus:border-[#7BE4B7] focus:ring-[#7BE4B7]"
-              />
+              <Label htmlFor="password">Senha</Label>
+              <Input id="password" name="password" type="password" required disabled={loading} />
             </div>
+
             {error && (
-              <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 p-3 rounded-md border border-red-200 dark:border-red-800">
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
                 {error}
               </div>
             )}
-            <Button 
-              type="submit" 
-              className="w-full bg-gradient-to-r from-[#7BE4B7] to-[#6ECBF5] text-white hover:opacity-90 transition-opacity" 
-              disabled={loading}
-            >
-              {loading ? 'Entrando...' : 'Entrar'}
+
+            <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-[#7BE4B7] to-[#6ECBF5] text-white">
+              {loading ? "Entrando..." : "Entrar"}
             </Button>
-            <div className="flex flex-col gap-2 text-center text-sm">
-              <button
-                type="button"
-                onClick={() => router.push('/reset-password')}
-                className="text-[#6ECBF5] hover:text-[#7BE4B7] hover:underline transition-colors"
-                disabled={loading}
-              >
+
+            <div className="text-center text-sm">
+              <button type="button" onClick={() => router.push("/reset-password")} className="text-[#6ECBF5] hover:underline">
                 Esqueceu a senha?
               </button>
-              <div className="text-gray-600 dark:text-gray-400">
-                Não tem uma conta?{' '}
-                <button
-                  type="button"
-                  onClick={() => router.push('/signup')}
-                  className="text-[#6ECBF5] hover:text-[#7BE4B7] hover:underline transition-colors"
-                  disabled={loading}
-                >
-                  Criar conta
-                </button>
-              </div>
+              <br />
+              <button type="button" onClick={() => router.push("/signup")} className="text-[#6ECBF5] hover:underline mt-2">
+                Criar conta
+              </button>
             </div>
           </form>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 export default function LoginPage() {
@@ -191,5 +144,5 @@ export default function LoginPage() {
     <Suspense fallback={<div>Carregando...</div>}>
       <LoginForm />
     </Suspense>
-  )
+  );
 }
