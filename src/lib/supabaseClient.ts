@@ -1,21 +1,13 @@
-import { createBrowserClient } from '@supabase/ssr'
+// src/lib/supabaseClient.ts
+import { createClient } from "@supabase/supabase-js";
 
-let client: ReturnType<typeof createBrowserClient> | null = null
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export function getSupabaseClient() {
-  if (!client) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Variáveis de ambiente do Supabase não configuradas')
-    }
-
-    client = createBrowserClient(supabaseUrl, supabaseAnonKey)
-  }
-
-  return client
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn(
+    "⚠️ NEXT_PUBLIC_SUPABASE_URL ou NEXT_PUBLIC_SUPABASE_ANON_KEY não configurados."
+  );
 }
 
-// Exportar também como createClient para compatibilidade
-export const createClient = getSupabaseClient
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
