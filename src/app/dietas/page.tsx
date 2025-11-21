@@ -53,32 +53,24 @@ export default function DietasPage() {
   const [lastPlan, setLastPlan] = useState<DietPlan | null>(null);
 
   // 1) Buscar usuário logado
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const {
-          data: { user },
-          error,
-        } = await supabase.auth.getUser();
+useEffect(() => {
+  const getSession = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-        if (error) {
-          console.error(error);
-          setError("Não foi possível carregar o usuário.");
-        } else if (user) {
-          setUserId(user.id);
-        } else {
-          setError("Nenhum usuário logado. Faça login para usar as dietas.");
-        }
-      } catch (err) {
-        console.error(err);
-        setError("Erro ao buscar usuário.");
-      } finally {
-        setLoadingUser(false);
-      }
-    };
+    if (session?.user?.id) {
+      setUserId(session.user.id);
+      setError(null);
+    } else {
+      setError("Nenhum usuário logado.");
+    }
 
-    fetchUser();
-  }, []);
+    setLoadingUser(false);
+  };
+
+  getSession();
+}, []);
 
   // 2) Buscar última dieta salva para o usuário
   useEffect(() => {
