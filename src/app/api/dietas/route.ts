@@ -9,6 +9,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "userId é obrigatório." }, { status: 400 });
   }
 
+  console.log("USER RECEBIDO NA API:", userId);
+
   // Aqui depois você troca por chamada de IA, se quiser
   const plano = {
     cafe: "Ovos mexidos + pão integral + café sem açúcar",
