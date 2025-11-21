@@ -380,7 +380,9 @@ export default function Home() {
 
           <div className="grid md:grid-cols-3 gap-6">
             {/* Dietas personalizadas */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
+            <div
+  className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3 cursor-pointer hover:shadow-xl transition" onClick={() => (window.location.href = "/dietas")} 
+              >
               <div className="w-10 h-10 rounded-full bg-[#7BE4B7]/15 flex items-center justify-center">
                 <UtensilsCrossed className="w-5 h-5 text-[#7BE4B7]" />
               </div>
@@ -394,7 +396,9 @@ export default function Home() {
             </div>
 
             {/* Treinos adaptados */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
+            <div
+  className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3 cursor-pointer hover:shadow-xl transition" onClick={() => (window.location.href = "/treinos")}
+>
               <div className="w-10 h-10 rounded-full bg-[#6ECBF5]/15 flex items-center justify-center">
                 <Dumbbell className="w-5 h-5 text-[#6ECBF5]" />
               </div>
@@ -408,7 +412,9 @@ export default function Home() {
             </div>
 
             {/* Monitoramento diário */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
+            <div
+  className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3 cursor-pointer hover:shadow-xl transition" onClick={() => (window.location.href = "/monitoramento")}
+>
               <div className="w-10 h-10 rounded-full bg-[#FF7A00]/15 flex items-center justify-center">
                 <Activity className="w-5 h-5 text-[#FF7A00]" />
               </div>
@@ -466,7 +472,9 @@ export default function Home() {
             </div>
 
             {/* Desafios e gamificação */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
+            <div
+  className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3 cursor-pointer hover:shadow-xl transition" onClick={() => (window.location.href = "/desafios")}
+>
               <div className="w-10 h-10 rounded-full bg-[#FF7A00]/15 flex items-center justify-center">
                 <Trophy className="w-5 h-5 text-[#FF7A00]" />
               </div>
@@ -480,7 +488,9 @@ export default function Home() {
             </div>
 
             {/* Planejador de refeições */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
+            <div
+  className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3 cursor-pointer hover:shadow-xl transition" onClick={() => (window.location.href = "/refeicoes")}
+>
               <div className="w-10 h-10 rounded-full bg-[#7BE4B7]/15 flex items-center justify-center">
                 <ClipboardList className="w-5 h-5 text-[#7BE4B7]" />
               </div>
@@ -493,7 +503,9 @@ export default function Home() {
             </div>
 
             {/* Treino em casa */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
+            <div
+  className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3 cursor-pointer hover:shadow-xl transition" onClick={() => (window.location.href = "/treino-em-casa")}
+>
               <div className="w-10 h-10 rounded-full bg-[#6ECBF5]/15 flex items-center justify-center">
                 <Flame className="w-5 h-5 text-[#6ECBF5]" />
               </div>
@@ -506,7 +518,9 @@ export default function Home() {
             </div>
 
             {/* Metas inteligentes */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
+            <div
+  className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3 cursor-pointer hover:shadow-xl transition" onClick={() => (window.location.href = "/metas")}
+>
               <div className="w-10 h-10 rounded-full bg-[#FF7A00]/15 flex items-center justify-center">
                 <Target className="w-5 h-5 text-[#FF7A00]" />
               </div>
@@ -520,7 +534,9 @@ export default function Home() {
             </div>
 
             {/* Suporte com IA */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
+            <div
+  className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3 cursor-pointer hover:shadow-xl transition" onClick={() => (window.location.href = "/suporte-ia")}
+>
               <div className="w-10 h-10 rounded-full bg-[#7BE4B7]/15 flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-[#7BE4B7]" />
               </div>
