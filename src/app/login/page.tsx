@@ -6,7 +6,7 @@ export const revalidate = 0;
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/context/AuthContext'
+import { useSupabase } from '@/providers/SupabaseProvider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,7 +22,7 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
-  const { refreshSession } = useAuth()
+  const { supabase } = useSupabase()
 
   useEffect(() => {
     // Limpar listeners ao desmontar
