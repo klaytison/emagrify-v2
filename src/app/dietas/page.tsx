@@ -17,7 +17,10 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // cliente Supabase para pegar o usuário logado no front
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabaseClient } from "@/lib/supabaseClient";
+
+const supabase = supabaseClient();
+
 
 interface DietPlan {
   id: string;
