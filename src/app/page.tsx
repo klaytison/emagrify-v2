@@ -20,17 +20,23 @@ import {
   CalendarClock,
   LineChart,
   Droplet,
+  Calculator,
+  Trophy,
+  Target,
+  ClipboardList,
+  Flame,
+  Sparkles,
 } from "lucide-react";
 
 export default function Home() {
   const [showContactDialog, setShowContactDialog] = useState(false);
 
   // Aba selecionada na seção de funções avançadas
-  const [activeToolTab, setActiveToolTab] = useState<"planejamento" | "monitoramento" | "nutricao" | "mentalidade">(
-    "planejamento"
-  );
+  const [activeToolTab, setActiveToolTab] = useState<
+    "planejamento" | "monitoramento" | "nutricao" | "mentalidade"
+  >("planejamento");
 
-  // Mini calculadora de água diária (exemplo funcional simples)
+  // Mini calculadora de água diária
   const [waterWeight, setWaterWeight] = useState<string>("");
   const [waterResult, setWaterResult] = useState<string>("");
 
@@ -43,7 +49,39 @@ export default function Home() {
     // Regra simples: 35 ml por kg
     const ml = peso * 35;
     const litros = ml / 1000;
-    setWaterResult(`Recomendação aproximada: ${litros.toFixed(2)} L de água por dia.`);
+    setWaterResult(
+      `Recomendação aproximada: ${litros.toFixed(
+        2
+      )} L de água por dia (ajuste conforme orientação profissional).`
+    );
+  };
+
+  // Mini calculadora de IMC
+  const [imcWeight, setImcWeight] = useState<string>("");
+  const [imcHeight, setImcHeight] = useState<string>("");
+  const [imcResult, setImcResult] = useState<string>("");
+
+  const handleImcCalc = () => {
+    const peso = Number(imcWeight.replace(",", "."));
+    const alturaCm = Number(imcHeight.replace(",", "."));
+
+    if (!peso || !alturaCm || peso <= 0 || alturaCm <= 0) {
+      setImcResult("Preencha peso e altura corretamente.");
+      return;
+    }
+
+    const alturaM = alturaCm / 100;
+    const imc = peso / (alturaM * alturaM);
+
+    let categoria = "";
+    if (imc < 18.5) categoria = "Abaixo do peso";
+    else if (imc < 25) categoria = "Peso normal";
+    else if (imc < 30) categoria = "Sobrepeso";
+    else if (imc < 35) categoria = "Obesidade grau I";
+    else if (imc < 40) categoria = "Obesidade grau II";
+    else categoria = "Obesidade grau III";
+
+    setImcResult(`Seu IMC é ${imc.toFixed(1)} (${categoria}).`);
   };
 
   return (
@@ -94,7 +132,9 @@ export default function Home() {
 
             <div className="flex flex-wrap gap-6 pt-2 text-sm text-gray-600 dark:text-gray-400">
               <div>
-                <div className="font-semibold text-[#2A2A2A] dark:text-white">50k+</div>
+                <div className="font-semibold text-[#2A2A2A] dark:text-white">
+                  50k+
+                </div>
                 <div>Usuários ativos</div>
               </div>
               <div>
@@ -129,20 +169,33 @@ export default function Home() {
 
                 <div className="grid grid-cols-3 gap-3 text-xs">
                   <div className="rounded-xl bg-[#7BE4B7]/10 p-3">
-                    <p className="text-gray-500 dark:text-gray-400 mb-1">Calorias alvo</p>
-                    <p className="font-bold text-[#2A2A2A] dark:text-white">1.650 kcal</p>
+                    <p className="text-gray-500 dark:text-gray-400 mb-1">
+                      Calorias alvo
+                    </p>
+                    <p className="font-bold text-[#2A2A2A] dark:text-white">
+                      1.650 kcal
+                    </p>
                   </div>
                   <div className="rounded-xl bg-[#6ECBF5]/10 p-3">
-                    <p className="text-gray-500 dark:text-gray-400 mb-1">Passos/dia</p>
-                    <p className="font-bold text-[#2A2A2A] dark:text-white">8.000</p>
+                    <p className="text-gray-500 dark:text-gray-400 mb-1">
+                      Passos/dia
+                    </p>
+                    <p className="font-bold text-[#2A2A2A] dark:text-white">
+                      8.000
+                    </p>
                   </div>
                   <div className="rounded-xl bg-[#FF7A00]/10 p-3">
-                    <p className="text-gray-500 dark:text-gray-400 mb-1">Sessões</p>
-                    <p className="font-bold text-[#2A2A2A] dark:text-white">4x/sem</p>
+                    <p className="text-gray-500 dark:text-gray-400 mb-1">
+                      Sessões
+                    </p>
+                    <p className="font-bold text-[#2A2A2A] dark:text-white">
+                      4x/sem
+                    </p>
                   </div>
                 </div>
               </div>
 
+              {/* Mini calculadora de água */}
               <div className="rounded-3xl bg-white/80 dark:bg-gray-800/90 shadow-xl border border-gray-100 dark:border-gray-700 p-4 flex items-center gap-4">
                 <Droplet className="w-8 h-8 text-[#6ECBF5]" />
                 <div className="flex-1">
@@ -176,6 +229,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+
       {/* === SEÇÃO PREMIUM — PLANO PRINCIPAL === */}
       <section
         id="premium"
@@ -195,9 +249,7 @@ export default function Home() {
           </div>
 
           {/* CARD PREMIUM */}
-          <div
-            className="relative max-w-xl mx-auto bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 p-10 text-center animate-fadeSlideUp"
-          >
+          <div className="relative max-w-xl mx-auto bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 p-10 text-center animate-fadeSlideUp">
             <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-32 h-32 bg-white/40 dark:bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
             <div className="relative z-10">
@@ -312,7 +364,8 @@ export default function Home() {
           </p>
         </div>
       </section>
-      {/* === FUNCIONALIDADES PRINCIPAIS === */}
+
+      {/* === FUNCIONALIDADES PRINCIPAIS + EXTRAS (9 CARDS) === */}
       <section className="py-20 bg-[#F4F4F4] dark:bg-gray-800 transition-colors duration-300">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
@@ -326,6 +379,7 @@ export default function Home() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
+            {/* Dietas personalizadas */}
             <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
               <div className="w-10 h-10 rounded-full bg-[#7BE4B7]/15 flex items-center justify-center">
                 <UtensilsCrossed className="w-5 h-5 text-[#7BE4B7]" />
@@ -339,6 +393,7 @@ export default function Home() {
               </p>
             </div>
 
+            {/* Treinos adaptados */}
             <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
               <div className="w-10 h-10 rounded-full bg-[#6ECBF5]/15 flex items-center justify-center">
                 <Dumbbell className="w-5 h-5 text-[#6ECBF5]" />
@@ -352,6 +407,7 @@ export default function Home() {
               </p>
             </div>
 
+            {/* Monitoramento diário */}
             <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
               <div className="w-10 h-10 rounded-full bg-[#FF7A00]/15 flex items-center justify-center">
                 <Activity className="w-5 h-5 text-[#FF7A00]" />
@@ -362,6 +418,118 @@ export default function Home() {
               <p className="text-gray-600 dark:text-gray-400 text-sm">
                 Registre peso, medidas, fotos e humor e acompanhe sua evolução com gráficos claros
                 e metas semanais.
+              </p>
+            </div>
+
+            {/* Calculadora de IMC (funcional) */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#6ECBF5]/15 flex items-center justify-center">
+                <Calculator className="w-5 h-5 text-[#6ECBF5]" />
+              </div>
+              <h3 className="font-bold text-lg text-[#2A2A2A] dark:text-white">
+                Calculadora de IMC
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                Descubra rapidamente se seu peso está dentro da faixa considerada saudável.
+              </p>
+
+              <div className="mt-2 space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    placeholder="Peso (kg)"
+                    value={imcWeight}
+                    onChange={(e) => setImcWeight(e.target.value)}
+                    className="w-1/2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-[#7BE4B7]"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Altura (cm)"
+                    value={imcHeight}
+                    onChange={(e) => setImcHeight(e.target.value)}
+                    className="w-1/2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-[#7BE4B7]"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  className="w-full bg-[#7BE4B7] hover:bg-[#7BE4B7]/90 text-white text-xs"
+                  onClick={handleImcCalc}
+                >
+                  Calcular IMC
+                </Button>
+                {imcResult && (
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                    {imcResult}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Desafios e gamificação */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#FF7A00]/15 flex items-center justify-center">
+                <Trophy className="w-5 h-5 text-[#FF7A00]" />
+              </div>
+              <h3 className="font-bold text-lg text-[#2A2A2A] dark:text-white">
+                Desafios semanais
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                Missões simples e pontuação de progresso para você se manter motivada sem
+                pressão excessiva.
+              </p>
+            </div>
+
+            {/* Planejador de refeições */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#7BE4B7]/15 flex items-center justify-center">
+                <ClipboardList className="w-5 h-5 text-[#7BE4B7]" />
+              </div>
+              <h3 className="font-bold text-lg text-[#2A2A2A] dark:text-white">
+                Planejador de refeições
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                Visualize suas refeições da semana e reduza decisões cansativas no dia a dia.
+              </p>
+            </div>
+
+            {/* Treino em casa */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#6ECBF5]/15 flex items-center justify-center">
+                <Flame className="w-5 h-5 text-[#6ECBF5]" />
+              </div>
+              <h3 className="font-bold text-lg text-[#2A2A2A] dark:text-white">
+                Treino em casa
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                Rotinas otimizadas para treinar com pouco espaço e, se quiser, sem equipamentos.
+              </p>
+            </div>
+
+            {/* Metas inteligentes */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#FF7A00]/15 flex items-center justify-center">
+                <Target className="w-5 h-5 text-[#FF7A00]" />
+              </div>
+              <h3 className="font-bold text-lg text-[#2A2A2A] dark:text-white">
+                Metas inteligentes
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                Defina objetivos realistas e receba sugestões de micro-metas semanais para não
+                desistir.
+              </p>
+            </div>
+
+            {/* Suporte com IA */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg flex flex-col gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#7BE4B7]/15 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-[#7BE4B7]" />
+              </div>
+              <h3 className="font-bold text-lg text-[#2A2A2A] dark:text-white">
+                Suporte com IA
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                Perguntas rápidas sobre treino, dieta e motivação, com respostas instantâneas
+                para te guiar.
               </p>
             </div>
           </div>
@@ -400,7 +568,7 @@ export default function Home() {
               {/* Conteúdo de cada aba */}
               {activeToolTab === "planejamento" && (
                 <div className="space-y-4">
-                  <h3 className="text-2xl font-bold text-[#2A2A2A] dark:text-white">
+                  <h3 className="text-2xl font-bold text-[#2A2A2A] dark:text:white">
                     Planejamento completo em poucos cliques
                   </h3>
                   <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
@@ -530,6 +698,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+
       {/* === FOOTER === */}
       <footer className="bg-[#2A2A2A] dark:bg-gray-950 text-white py-10 mt-20">
         <div className="container mx-auto px-4 text-center text-sm text-gray-300">
