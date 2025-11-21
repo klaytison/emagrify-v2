@@ -1,0 +1,25 @@
+import { NextResponse } from "next/server";
+import { createServerSupabase } from "../../_supabaseServer";
+
+export async function POST(req: Request) {
+  const supabase = createServerSupabase();
+  const { userId, tipo, nivel } = await req.json();
+
+  const treino = {
+    aquecimento: ["5 min caminhada leve", "Alongamentos dinâmicos"],
+    exercicios: [
+      { nome: "Agachamento", series: 3, reps: 12 },
+      { nome: "Flexão de braço", series: 3, reps: 10 },
+      { nome: "Prancha", series: 3, tempo_segundos: 30 },
+    ],
+    finalizacao: ["Alongamento leve de pernas e costas"],
+  };
+
+  const { data, error } = await supabase.from("workouts").insert([
+    { user_id: userId, tipo, nivel, treino },
+  ]).select().single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  return NextResponse.json({ workout: data });
+}
