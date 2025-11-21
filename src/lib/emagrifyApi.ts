@@ -1,5 +1,6 @@
 // src/lib/emagrifyApi.ts
-import { supabase } from "./supabaseClient";
+import { supabaseClient } from "./supabaseClient";
+const supabase = supabaseClient();
 
 // Tipos simples (você pode refinar depois, se quiser)
 export interface ProgressRow {
