@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Heart, Menu, X, Sun, Moon, User, LogOut, LayoutDashboard } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext'
+import { useSupabase
+ } from '@/context/AuthContext'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +19,8 @@ export default function Header() {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
-  const { user, loading, signOut } = useAuth()
+  const { user, loading, signOut } = useSupabase
+()
 
   const ADMIN_EMAIL = 'klaytsa3@gmail.com'
 
