@@ -1,249 +1,187 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
 import { useSupabase } from "@/providers/SupabaseProvider";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/components/ui/card";
+import { useRouter, useParams } from "next/navigation";
+import { ArrowLeft, Loader2, Trash2, Pencil, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Trash2 } from "lucide-react";
 
-export default function EditTreinoAdmin() {
-  const { id } = useParams();
-  const router = useRouter();
+interface Treino {
+  id: string;
+  titulo: string;
+  descricao: string | null;
+  nivel: string;
+  categoria: string;
+  duracao: number | null;
+  calorias: number | null;
+  exercicios: {
+    nome: string;
+    series: string | null;
+    repeticoes: string | null;
+    descansoSegundos: number | null;
+  }[];
+  video_url: string | null;
+  imagem_url: string | null;
+}
+
+export default function TreinoDetalhesPage() {
   const { supabase } = useSupabase();
+  const router = useRouter();
+  const params = useParams();
+  const treinoId = params?.id as string;
 
+  const [treino, setTreino] = useState<Treino | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const [treino, setTreino] = useState<any>(null);
+  async function loadTreino() {
+    setLoading(true);
 
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("");
-  const [level, setLevel] = useState("");
-  const [duration, setDuration] = useState("");
-  const [calories, setCalories] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [description, setDescription] = useState("");
-  const [exercises, setExercises] = useState("");
-
-  // 🔹 Carregar treino ao abrir a página
-  useEffect(() => {
-    async function loadWorkout() {
-      const { data, error } = await supabase
-        .from("workouts_catalog")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (!error && data) {
-        setTreino(data);
-        setTitle(data.title);
-        setCategory(data.category);
-        setLevel(data.level);
-        setDuration(data.duration);
-        setCalories(data.calories);
-        setImageUrl(data.image_url || "");
-        setDescription(data.description || "");
-        setExercises(data.exercises || "");
-      }
-
-      setLoading(false);
-    }
-
-    loadWorkout();
-  }, [supabase, id]);
-
-  // 🔹 Salvar alterações
-  async function handleSave() {
-    setSaving(true);
-
-    const { error } = await supabase
-      .from("workouts_catalog")
-      .update({
-        title,
-        category,
-        level,
-        duration: Number(duration),
-        calories: Number(calories),
-        image_url: imageUrl,
-        description,
-        exercises,
-      })
-      .eq("id", id);
-
-    setSaving(false);
+    const { data, error } = await supabase
+      .from("treinos")
+      .select("*")
+      .eq("id", treinoId)
+      .single();
 
     if (!error) {
-      alert("Treino atualizado com sucesso!");
-      router.refresh();
-    } else {
-      alert("Erro ao salvar treino.");
+      setTreino(data);
     }
+
+    setLoading(false);
   }
 
-  // 🔹 Excluir treino
-  async function handleDelete() {
-    const confirmDelete = confirm("Tem certeza que deseja excluir este treino?");
-    if (!confirmDelete) return;
+  useEffect(() => {
+    if (treinoId) loadTreino();
+  }, [treinoId]);
+
+  async function deleteTreino() {
+    if (!confirm("Tem certeza que deseja excluir este treino?")) return;
 
     setDeleting(true);
 
     const { error } = await supabase
-      .from("workouts_catalog")
+      .from("treinos")
       .delete()
-      .eq("id", id);
+      .eq("id", treinoId);
 
     setDeleting(false);
 
     if (!error) {
-      alert("Treino excluído!");
-      router.push("/admin");
-    } else {
-      alert("Erro ao excluir treino.");
+      router.push("/admin/treinos");
     }
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-500">
-        <Loader2 className="animate-spin w-6 h-6" />
-      </div>
+      <main className="min-h-screen bg-gray-950 text-gray-50 flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </main>
+    );
+  }
+
+  if (!treino) {
+    return (
+      <main className="min-h-screen bg-gray-950 text-gray-50 flex items-center justify-center">
+        Treino não encontrado.
+      </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gray-950 text-gray-50 py-10">
-      <div className="max-w-3xl mx-auto px-4">
-        <Card className="bg-gray-900 border-gray-800">
-          <CardHeader>
-            <CardTitle className="text-xl">Editar Treino</CardTitle>
-          </CardHeader>
+    <main className="min-h-screen bg-gray-950 text-gray-50 p-6">
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Voltar */}
+        <button
+          className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-200 transition-colors"
+          onClick={() => router.push("/admin/treinos")}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Voltar
+        </button>
 
-          <CardContent className="space-y-5">
-            {/* Título */}
-            <div>
-              <label className="text-sm text-gray-400">Título</label>
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white"
-              />
-            </div>
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Dumbbell className="w-7 h-7 text-emerald-400" />
+            {treino.titulo}
+          </h1>
 
-            {/* Categoria */}
-            <div>
-              <label className="text-sm text-gray-400">Categoria</label>
-              <Input
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white"
-              />
-            </div>
+          <div className="flex gap-3">
+            <Button
+              onClick={() => router.push(`/admin/treinos/editar/${treinoId}`)}
+              className="bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              <Pencil className="w-4 h-4 mr-1" />
+              Editar
+            </Button>
 
-            {/* Nível */}
-            <div>
-              <label className="text-sm text-gray-400">Nível</label>
-              <Input
-                value={level}
-                onChange={(e) => setLevel(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white"
-              />
-            </div>
+            <Button
+              onClick={deleteTreino}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-1" />
+              )}
+              Excluir
+            </Button>
+          </div>
+        </div>
 
-            {/* Duração */}
-            <div>
-              <label className="text-sm text-gray-400">Duração (minutos)</label>
-              <Input
-                type="number"
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white"
-              />
-            </div>
+        {/* Categoria / nível */}
+        <p className="text-gray-400 text-sm">
+          {treino.categoria} • {treino.nivel}
+        </p>
 
-            {/* Calorias */}
-            <div>
-              <label className="text-sm text-gray-400">Calorias estimadas</label>
-              <Input
-                type="number"
-                value={calories}
-                onChange={(e) => setCalories(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white"
-              />
-            </div>
+        {/* Descrição */}
+        {treino.descricao && (
+          <p className="text-gray-300 leading-relaxed">{treino.descricao}</p>
+        )}
 
-            {/* Imagem */}
-            <div>
-              <label className="text-sm text-gray-400">URL da Imagem</label>
-              <Input
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white"
-              />
-            </div>
+        {/* Vídeo */}
+        {treino.video_url && (
+          <div className="aspect-video w-full rounded-xl overflow-hidden border border-gray-800 bg-black">
+            <iframe
+              src={treino.video_url}
+              className="w-full h-full"
+              allowFullScreen
+            />
+          </div>
+        )}
 
-            {/* Descrição */}
-            <div>
-              <label className="text-sm text-gray-400">Descrição</label>
-              <Textarea
-                rows={4}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white"
-              />
-            </div>
+        {/* Imagem */}
+        {treino.imagem_url && (
+          <img
+            src={treino.imagem_url}
+            className="w-full max-h-80 object-cover rounded-xl border border-gray-800"
+          />
+        )}
 
-            {/* Exercícios */}
-            <div>
-              <label className="text-sm text-gray-400">
-                Exercícios (um por linha)
-              </label>
-              <Textarea
-                rows={6}
-                value={exercises}
-                onChange={(e) => setExercises(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white"
-              />
-            </div>
+        {/* Exercícios */}
+        <section className="space-y-3">
+          <h2 className="text-xl font-semibold">Exercícios do treino</h2>
 
-            {/* Botões */}
-            <div className="flex justify-between pt-4">
-              <Button
-                onClick={handleSave}
-                disabled={saving}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white"
+          <div className="space-y-3">
+            {treino.exercicios.map((ex, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-gray-800 bg-gray-900 p-4"
               >
-                {saving ? (
-                  <Loader2 className="animate-spin w-4 h-4 mr-2" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                Salvar
-              </Button>
+                <p className="text-lg font-semibold">{ex.nome}</p>
 
-              <Button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="bg-red-600 hover:bg-red-500 text-white"
-              >
-                {deleting ? (
-                  <Loader2 className="animate-spin w-4 h-4 mr-2" />
-                ) : (
-                  <Trash2 className="w-4 h-4 mr-2" />
-                )}
-                Excluir
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                <p className="text-gray-400 text-sm">
+                  {ex.series ? `${ex.series} séries` : ""}
+                  {ex.repeticoes ? ` • ${ex.repeticoes} reps` : ""}
+                  {ex.descansoSegundos
+                    ? ` • ${ex.descansoSegundos}s descanso`
+                    : ""}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </main>
   );
