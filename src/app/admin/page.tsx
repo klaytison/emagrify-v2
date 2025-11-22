@@ -9,13 +9,19 @@ import {
   BarChart3,
   TrendingUp,
   Dumbbell,
+  Plus,
+  Settings,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 export default function AdminPage() {
+  const router = useRouter();
+
   const { data: overview, loading: loadingOverview } = useAdminOverview();
   const { data: users, loading: loadingUsers } = useAdminList<any>("/api/admin/users");
   const { data: subs, loading: loadingSubs } = useAdminList<any>("/api/admin/subscriptions");
@@ -25,15 +31,42 @@ export default function AdminPage() {
   return (
     <main className="min-h-screen bg-gray-950 text-gray-50">
       <div className="max-w-6xl mx-auto px-4 py-10 space-y-10">
-        {/* Título */}
-        <header className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold">Painel Administrativo</h1>
-          <p className="text-sm text-gray-400">
-            Visão geral do Emagrify – usuários, assinaturas, pagamentos e progresso.
-          </p>
+
+        {/* ===== TÍTULO + BOTÕES ===== */}
+        <header className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Painel Administrativo</h1>
+            <p className="text-sm text-gray-400">
+              Visão geral do Emagrify – usuários, assinaturas, pagamentos e progresso.
+            </p>
+          </div>
+
+          {/* ==== AÇÕES RÁPIDAS ==== */}
+          <div className="flex flex-wrap gap-3">
+
+            {/* Adicionar treino */}
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={() => router.push("/admin/treinos/novo")}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar novo treino
+            </Button>
+
+            {/* Gerenciar treinos */}
+            <Button
+              variant="outline"
+              className="border-gray-700 text-gray-200 hover:bg-gray-800"
+              onClick={() => router.push("/admin/treinos")}
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Gerenciar treinos
+            </Button>
+
+          </div>
         </header>
 
-        {/* Cards de overview */}
+        {/* ===== CARDS ===== */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <OverviewCard
             icon={<Users className="w-5 h-5 text-emerald-400" />}
@@ -73,9 +106,8 @@ export default function AdminPage() {
           />
         </section>
 
-        {/* Tabelas */}
+        {/* ===== LISTAGENS ===== */}
         <section className="grid lg:grid-cols-2 gap-6">
-          {/* Usuários */}
           <AdminCard title="Últimos usuários" subtitle="Até 50 mais recentes">
             {loadingUsers ? (
               <p className="text-sm text-gray-400">Carregando...</p>
@@ -92,7 +124,6 @@ export default function AdminPage() {
             )}
           </AdminCard>
 
-          {/* Assinaturas */}
           <AdminCard title="Assinaturas" subtitle="Últimas assinaturas criadas">
             {loadingSubs ? (
               <p className="text-sm text-gray-400">Carregando...</p>
@@ -112,7 +143,6 @@ export default function AdminPage() {
         </section>
 
         <section className="grid lg:grid-cols-2 gap-6">
-          {/* Pagamentos */}
           <AdminCard title="Pagamentos" subtitle="Últimos 50 pagamentos">
             {loadingPayments ? (
               <p className="text-sm text-gray-400">Carregando...</p>
@@ -129,7 +159,6 @@ export default function AdminPage() {
             )}
           </AdminCard>
 
-          {/* Progresso */}
           <AdminCard
             title="Progresso recente"
             subtitle="Peso, gordura e calorias registradas"
@@ -155,15 +184,7 @@ export default function AdminPage() {
   );
 }
 
-function OverviewCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
+function OverviewCard({ icon, label, value }: any) {
   return (
     <div className="rounded-2xl bg-gray-900 border border-gray-800 p-4 flex flex-col gap-2">
       <div className="flex items-center justify-between">
@@ -172,23 +193,13 @@ function OverviewCard({
         </span>
         <BarChart3 className="w-4 h-4 text-gray-600" />
       </div>
-      <span className="text-xs uppercase tracking-wide text-gray-500">
-        {label}
-      </span>
+      <span className="text-xs uppercase tracking-wide text-gray-500">{label}</span>
       <span className="text-lg font-semibold">{value}</span>
     </div>
   );
 }
 
-function AdminCard({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
+function AdminCard({ title, subtitle, children }: any) {
   return (
     <div className="rounded-2xl bg-gray-900 border border-gray-800 p-5 space-y-3">
       <div className="flex items-center justify-between gap-2">
@@ -205,13 +216,7 @@ function AdminCard({
   );
 }
 
-function Table({
-  headers,
-  rows,
-}: {
-  headers: string[];
-  rows: (string | number | null | undefined)[][];
-}) {
+function Table({ headers, rows }: any) {
   if (!rows.length) {
     return <p className="text-sm text-gray-500">Nenhum dado encontrado.</p>;
   }
@@ -221,7 +226,7 @@ function Table({
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-xs text-gray-500 border-b border-gray-800">
-            {headers.map((h) => (
+            {headers.map((h: string) => (
               <th key={h} className="pb-2 pr-4">
                 {h}
               </th>
@@ -229,9 +234,9 @@ function Table({
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-800">
-          {rows.map((row, i) => (
+          {rows.map((row: any, i: number) => (
             <tr key={i} className="hover:bg-gray-800/40">
-              {row.map((cell, j) => (
+              {row.map((cell: any, j: number) => (
                 <td key={j} className="py-2 pr-4">
                   {cell ?? "-"}
                 </td>
