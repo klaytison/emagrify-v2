@@ -1,191 +1,187 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { useSupabase } from "@/providers/SupabaseProvider";
-import Header from "@/components/Header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useParams, useRouter } from "next/navigation";
+import { Dumbbell, Clock, Flame, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Dumbbell, CheckCircle } from "lucide-react";
+import Header from "@/components/Header";
 
-interface WorkoutPlan {
+interface Treino {
   id: string;
-  titulo: string | null;
-  nivel: string | null;
-  foco: string | null;
+  titulo: string;
   descricao: string | null;
-  plano: {
-    exercicios: {
-      nome: string;
-      series: string;
-      repeticoes: string;
-      descanso: string;
-      explicacao: string;
-    }[];
-  };
+  nivel: string;
+  categoria: string | null;
+  duracao: number | null;
+  calorias: number | null;
+  video_url: string | null;
+  imagem_url: string | null;
+  exercicios: {
+    nome: string;
+    series: string | null;
+    repeticoes: string | null;
+    descansoSegundos: number | null;
+  }[];
 }
 
 export default function TreinoDetalhesPage() {
-  const { id } = useParams();
-  const { supabase, session, loading } = useSupabase();
+  const params = useParams();
+  const router = useRouter();
 
-  const [treino, setTreino] = useState<WorkoutPlan | null>(null);
-  const [loadingTreino, setLoadingTreino] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState("");
+  const id = params?.id as string;
+
+  const [treino, setTreino] = useState<Treino | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
-
-    const load = async () => {
+    async function loadTreino() {
       try {
+        setLoading(true);
         const res = await fetch(`/api/treinos/${id}`);
         const data = await res.json();
 
-        if (data.plan) {
-          setTreino(data.plan);
+        if (!res.ok) {
+          console.error(data);
+          return;
         }
-      } catch (e) {
-        console.error("Erro ao carregar treino:", e);
+
+        setTreino(data.treino);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
+    }
 
-      setLoadingTreino(false);
-    };
-
-    load();
+    if (id) loadTreino();
   }, [id]);
 
-  const registrarConclusao = async () => {
-    if (!session?.user?.id) {
-      setMsg("Você precisa estar logado para marcar o treino.");
-      return;
-    }
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-500">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
+    );
+  }
 
-    setSaving(true);
-    setMsg("");
-
-    const { error } = await supabase.from("workout_logs").insert({
-      user_id: session.user.id,
-      treino_id: id,
-      concluido_em: new Date().toISOString(),
-    });
-
-    if (error) {
-      console.error(error);
-      setMsg("Erro ao registrar conclusão.");
-    } else {
-      setMsg("Treino concluído com sucesso! 💪🔥");
-    }
-
-    setSaving(false);
-  };
+  if (!treino) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-300">
+        Treino não encontrado.
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-50">
+    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50">
       <Header />
 
-      <main className="container mx-auto px-4 py-10 max-w-4xl space-y-8">
-        {/* LOADING */}
-        {loadingTreino ? (
-          <p className="flex items-center gap-2 text-gray-400">
-            <Loader2 className="w-5 h-5 animate-spin" /> Carregando treino…
-          </p>
-        ) : !treino ? (
-          <p className="text-gray-400">Treino não encontrado.</p>
-        ) : (
-          <>
-            {/* TÍTULO */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#6ECBF5]/20 flex items-center justify-center">
-                <Dumbbell className="w-6 h-6 text-[#6ECBF5]" />
-              </div>
+      <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+        {/* VOLTAR */}
+        <button
+          onClick={() => router.push("/treinos")}
+          className="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Voltar para treinos
+        </button>
 
-              <div>
-                <h1 className="text-3xl font-bold">{treino.titulo}</h1>
-                <p className="text-gray-400">
-                  Nível:{" "}
-                  <span className="text-white font-semibold">{treino.nivel}</span>{" "}
-                  • Foco:{" "}
-                  <span className="text-white font-semibold">{treino.foco}</span>
-                </p>
-              </div>
-            </div>
+        {/* CAPA */}
+        <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
+          {treino.imagem_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={treino.imagem_url}
+              alt={treino.titulo}
+              className="w-full h-56 object-cover"
+            />
+          ) : (
+            <div className="w-full h-56 bg-gradient-to-br from-emerald-500/30 via-sky-500/30 to-slate-900" />
+          )}
+        </div>
 
-            {/* DESCRIÇÃO */}
-            {treino.descricao && (
-              <p className="text-gray-300 text-lg">{treino.descricao}</p>
+        {/* TÍTULO */}
+        <section className="space-y-3">
+          <h1 className="text-2xl md:text-3xl font-bold">{treino.titulo}</h1>
+
+          {treino.descricao && (
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              {treino.descricao}
+            </p>
+          )}
+
+          <div className="flex items-center flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
+            <span className="inline-flex items-center gap-1 capitalize">
+              <Dumbbell className="w-4 h-4 text-emerald-400" />
+              {treino.nivel}
+            </span>
+
+            {treino.duracao != null && (
+              <span className="inline-flex items-center gap-1">
+                <Clock className="w-4 h-4 text-sky-400" />
+                {treino.duracao} min
+              </span>
             )}
 
-            {/* LISTA DE EXERCÍCIOS */}
-            <Card className="dark:bg-gray-800 border border-[#6ECBF5]/20 mt-6">
-              <CardHeader>
-                <CardTitle className="text-xl">Exercícios</CardTitle>
-              </CardHeader>
+            {treino.calorias != null && (
+              <span className="inline-flex items-center gap-1">
+                <Flame className="w-4 h-4 text-amber-400" />
+                ~{treino.calorias} kcal
+              </span>
+            )}
+          </div>
+        </section>
 
-              <CardContent className="space-y-6">
-                {treino.plano.exercicios.map((ex, idx) => (
-                  <div
-                    key={idx}
-                    className="p-4 rounded-lg bg-gray-900/40 border border-gray-700"
-                  >
-                    <h2 className="text-xl font-bold text-[#6ECBF5]">
-                      {ex.nome}
-                    </h2>
+        {/* VÍDEO */}
+        {treino.video_url && (
+          <section className="space-y-2">
+            <h2 className="text-lg font-semibold">Vídeo demonstrativo</h2>
 
-                    <p className="text-gray-300 mt-1">{ex.explicacao}</p>
-
-                    <p className="mt-3 text-gray-400">
-                      <span className="text-gray-300 font-semibold">Séries:</span>{" "}
-                      {ex.series}
-                    </p>
-
-                    <p className="text-gray-400">
-                      <span className="text-gray-300 font-semibold">
-                        Repetições:
-                      </span>{" "}
-                      {ex.repeticoes}
-                    </p>
-
-                    <p className="text-gray-400">
-                      <span className="text-gray-300 font-semibold">
-                        Descanso:
-                      </span>{" "}
-                      {ex.descanso}
-                    </p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* BOTÃO CONCLUIR */}
-            <div className="flex flex-col items-start gap-3 mt-6">
-              <Button
-                onClick={registrarConclusao}
-                disabled={saving}
-                className="bg-[#7BE4B7] hover:bg-[#62cfa2] text-white"
-              >
-                {saving ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="animate-spin w-4 h-4" /> Registrando…
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" />
-                    Marcar como concluído
-                  </span>
-                )}
-              </Button>
-
-              {msg && (
-                <p className="text-sm text-gray-300 bg-black/30 px-3 py-2 rounded-lg">
-                  {msg}
-                </p>
-              )}
+            <div className="relative w-full pb-[56.25%] rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
+              <iframe
+                src={treino.video_url.replace("watch?v=", "embed/")}
+                className="absolute top-0 left-0 w-full h-full"
+                allowFullScreen
+              />
             </div>
-          </>
+          </section>
         )}
+
+        {/* LISTA DE EXERCÍCIOS */}
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Exercícios</h2>
+
+          <div className="space-y-4">
+            {treino.exercicios.map((ex, index) => (
+              <div
+                key={index}
+                className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">{ex.nome}</h3>
+                </div>
+
+                <div className="mt-2 text-sm text-gray-600 dark:text-gray-400 space-x-3">
+                  {ex.series && <span><b>Séries:</b> {ex.series}</span>}
+                  {ex.repeticoes && <span><b>Reps:</b> {ex.repeticoes}</span>}
+                  {ex.descansoSegundos != null && (
+                    <span><b>Descanso:</b> {ex.descansoSegundos}s</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* BOTÃO FINAL */}
+        <div className="pt-4 flex">
+          <Button
+            className="bg-emerald-500 hover:bg-emerald-500/90 text-white px-6"
+            onClick={() => router.push("/monitoramento")}
+          >
+            Registrar progresso
+          </Button>
+        </div>
       </main>
     </div>
   );
