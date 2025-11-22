@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Dumbbell, Clock, Flame, ArrowLeft, Loader2, Heart } from "lucide-react";
+import { Dumbbell, Clock, Flame, ArrowLeft, Loader2, Heart, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import { useSupabase } from "@/providers/SupabaseProvider";
@@ -39,6 +39,38 @@ export default function TreinoDetalhesPage() {
   const [favorito, setFavorito] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
 
+  const [saving, setSaving] = useState(false);
+
+  // FUNÇÃO: Concluir Treino
+  async function concluirTreino() {
+    if (!session?.user) {
+      alert("Você precisa estar logada para concluir treinos.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const res = await fetch("/api/treinos/concluir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ treinoId: id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Erro ao concluir treino.");
+        return;
+      }
+
+      router.push("/monitoramento");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Carregar treino
   useEffect(() => {
     async function loadTreino() {
       try {
@@ -46,11 +78,7 @@ export default function TreinoDetalhesPage() {
         const res = await fetch(`/api/treinos/${id}`);
         const data = await res.json();
 
-        if (!res.ok) {
-          console.error(data);
-          return;
-        }
-
+        if (!res.ok) return;
         setTreino(data.treino);
       } catch (err) {
         console.error(err);
@@ -62,7 +90,7 @@ export default function TreinoDetalhesPage() {
     if (id) loadTreino();
   }, [id]);
 
-  // 🔥 1) Verificar se já é favorito
+  // Verificar se é favorito
   useEffect(() => {
     async function checkFavorite() {
       if (!session?.user?.id) return;
@@ -80,12 +108,9 @@ export default function TreinoDetalhesPage() {
     checkFavorite();
   }, [session, id, supabase]);
 
-  // 🔥 2) Função de favoritar / desfavoritar
+  // Favoritar
   async function toggleFavorito() {
-    if (!session?.user) {
-      alert("Você precisa estar logada para favoritar treinos.");
-      return;
-    }
+    if (!session?.user) return alert("Você precisa estar logada.");
 
     setFavLoading(true);
 
@@ -101,15 +126,9 @@ export default function TreinoDetalhesPage() {
 
       const data = await res.json();
 
-      if (!res.ok) {
-        console.error(data);
-        alert("Erro ao atualizar favorito.");
-        return;
-      }
+      if (!res.ok) return alert("Erro ao atualizar favorito.");
 
       setFavorito(!favorito);
-    } catch (err) {
-      console.error(err);
     } finally {
       setFavLoading(false);
     }
@@ -136,6 +155,7 @@ export default function TreinoDetalhesPage() {
       <Header />
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+        
         {/* VOLTAR */}
         <button
           onClick={() => router.push("/treinos")}
@@ -158,62 +178,81 @@ export default function TreinoDetalhesPage() {
           )}
         </div>
 
-        {/* TÍTULO + FAVORITO */}
+        {/* TÍTULO + BOTÕES (TOP) */}
         <section className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
+
             <h1 className="text-2xl md:text-3xl font-bold">{treino.titulo}</h1>
 
-            <Button
-              onClick={toggleFavorito}
-              disabled={favLoading}
-              className={
-                favorito
-                  ? "bg-red-500 hover:bg-red-600 text-white"
-                  : "bg-emerald-500 hover:bg-emerald-600 text-white"
-              }
-            >
-              {favLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Heart
-                    className={`w-4 h-4 ${
-                      favorito ? "fill-white" : "fill-transparent"
-                    }`}
-                  />
-                  {favorito ? "Remover" : "Favoritar"}
-                </span>
-              )}
-            </Button>
+            <div className="flex gap-3">
+              
+              {/* Concluir treino (TOPO) */}
+              <Button
+                onClick={concluirTreino}
+                disabled={saving}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <span className="flex items-center gap-1">
+                    <Check className="w-4 h-4" />
+                    Concluir
+                  </span>
+                )}
+              </Button>
+
+              {/* Favoritar */}
+              <Button
+                onClick={toggleFavorito}
+                disabled={favLoading}
+                className={
+                  favorito
+                    ? "bg-red-500 hover:bg-red-600 text-white"
+                    : "bg-emerald-500 hover:bg-emerald-600 text-white"
+                }
+              >
+                {favLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Heart
+                      className={`w-4 h-4 ${
+                        favorito ? "fill-white" : "fill-transparent"
+                      }`}
+                    />
+                    {favorito ? "Remover" : "Favoritar"}
+                  </span>
+                )}
+              </Button>
+
+            </div>
           </div>
 
           {treino.descricao && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               {treino.descricao}
             </p>
           )}
-
-          <div className="flex items-center flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
-            <span className="inline-flex items-center gap-1 capitalize">
-              <Dumbbell className="w-4 h-4 text-emerald-400" />
-              {treino.nivel}
-            </span>
-
-            {treino.duracao != null && (
-              <span className="inline-flex items-center gap-1">
-                <Clock className="w-4 h-4 text-sky-400" />
-                {treino.duracao} min
-              </span>
-            )}
-
-            {treino.calorias != null && (
-              <span className="inline-flex items-center gap-1">
-                <Flame className="w-4 h-4 text-amber-400" />
-                ~{treino.calorias} kcal
-              </span>
-            )}
-          </div>
         </section>
+
+        {/* Botão no meio */}
+        <div className="pt-4">
+          <Button
+            onClick={concluirTreino}
+            disabled={saving}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white w-full"
+          >
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                <Check className="w-4 h-4" />
+                Concluir treino
+              </span>
+            )}
+          </Button>
+        </div>
 
         {/* VÍDEO */}
         {treino.video_url && (
@@ -240,9 +279,7 @@ export default function TreinoDetalhesPage() {
                 key={index}
                 className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4"
               >
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold">{ex.nome}</h3>
-                </div>
+                <h3 className="font-semibold">{ex.nome}</h3>
 
                 <div className="mt-2 text-sm text-gray-600 dark:text-gray-400 space-x-3">
                   {ex.series && <span><b>Séries:</b> {ex.series}</span>}
@@ -257,14 +294,23 @@ export default function TreinoDetalhesPage() {
         </section>
 
         {/* BOTÃO FINAL */}
-        <div className="pt-4 flex">
+        <div className="pt-6 flex">
           <Button
-            className="bg-emerald-500 hover:bg-emerald-500/90 text-white px-6"
-            onClick={() => router.push("/monitoramento")}
+            onClick={concluirTreino}
+            disabled={saving}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white w-full py-3"
           >
-            Registrar progresso
+            {saving ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <span className="flex items-center justify-center gap-2 text-lg">
+                <Check className="w-5 h-5" />
+                Concluir treino
+              </span>
+            )}
           </Button>
         </div>
+
       </main>
     </div>
   );
