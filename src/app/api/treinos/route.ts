@@ -1,64 +1,24 @@
 import { NextResponse } from "next/server";
-import { createServerSupabase } from "../_supabaseServer";
+import { createClient } from "@/lib/supabase/server";
 
-export async function POST(req: Request) {
-  const supabase = createServerSupabase();
-  const { userId, tipo, nivel } = await req.json();
+export const dynamic = "force-dynamic";
 
-  if (!userId) {
-    return NextResponse.json({ error: "userId é obrigatório." }, { status: 400 });
+export async function GET() {
+  try {
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+      .from("workout_plans")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    return NextResponse.json({ plans: data });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err.message || "Erro ao carregar treinos." },
+      { status: 500 }
+    );
   }
-
-  const treino = {
-    aquecimento: ["5 min de caminhada leve", "Alongamento dinâmico"],
-    exercicios: [
-      { nome: "Agachamento", series: 3, reps: 12 },
-      { nome: "Flexão de braço", series: 3, reps: 10 },
-      { nome: "Prancha", series: 3, tempoSegundos: 30 },
-    ],
-    finalizacao: ["Alongamento leve de pernas e costas"],
-  };
-
-  const { data, error } = await supabase
-    .from("workouts")
-    .insert([{ user_id: userId, tipo: tipo ?? "academia", nivel: nivel ?? "iniciante", treino }])
-    .select()
-    .single();
-
-  if (error) {
-    console.error(error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ workout: data });
-}
-
-export async function GET(req: Request) {
-  const supabase = createServerSupabase();
-  const { searchParams } = new URL(req.url);
-  const userId = searchParams.get("userId");
-  const tipo = searchParams.get("tipo"); // opcional: casa / academia
-
-  if (!userId) {
-    return NextResponse.json({ error: "userId é obrigatório." }, { status: 400 });
-  }
-
-  let query = supabase
-    .from("workouts")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-
-  if (tipo) {
-    query = query.eq("tipo", tipo);
-  }
-
-  const { data, error } = await query.limit(1).single();
-
-  if (error) {
-    console.error(error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ workout: data });
 }
