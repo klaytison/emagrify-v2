@@ -17,15 +17,20 @@ import { toast } from "sonner";
 import { Heart } from "lucide-react";
 
 const ADMIN_EMAIL = "klaytsa3@gmail.com";
-const LOGIN_TIMEOUT = 15000;
+const LOGIN_TIMEOUT = 15000; // 15 segundos
 
 function LoginForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // ✅ Agora usamos SOMENTE o supabase vindo do Provider
-  const { supabase } = useSupabase();
+  const { supabase, refreshSession } = useSupabase();
+
+  useEffect(() => {
+    return () => {
+      setLoading(false);
+    };
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -38,8 +43,10 @@ function LoginForm() {
 
     const timeoutId = setTimeout(() => {
       setLoading(false);
-      setError("Tempo limite excedido.");
-      toast.error("Erro ao conectar");
+      setError(
+        "Tempo limite excedido. Verifique sua conexão e tente novamente."
+      );
+      toast.error("Erro ao conectar. Tente novamente.");
     }, LOGIN_TIMEOUT);
 
     try {
@@ -52,36 +59,48 @@ function LoginForm() {
       clearTimeout(timeoutId);
 
       if (signInError) {
-        setError(signInError.message);
+        console.error("Erro de autenticação:", signInError);
+        setError(signInError.message || "Erro ao fazer login");
         setLoading(false);
         toast.error("Credenciais inválidas");
         return;
       }
 
       if (data.session && data.user) {
-        toast.success("Login realizado!");
+        console.log("Login bem-sucedido:", data.user.email);
 
-        // Registrar histórico
-        await supabase.from("historico_acao").insert({
-          user_id: data.user.id,
-          tipo: "login",
-          descricao: "Login realizado",
-        });
+        try {
+          await supabase.from("historico_acao").insert({
+            user_id: data.user.id,
+            tipo: "login",
+            descricao: "Login realizado",
+          });
+        } catch (histError) {
+          console.error("Erro ao registrar histórico:", histError);
+        }
 
-        // Redirecionar baseado no email
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        await refreshSession();
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
         if (data.user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+          toast.success("Bem-vindo, Admin!");
           window.location.href = "/admin";
         } else {
+          toast.success("Login realizado com sucesso!");
           window.location.href = "/";
         }
+      } else {
+        setError("Erro ao fazer login. Tente novamente.");
+        setLoading(false);
       }
     } catch (err) {
       clearTimeout(timeoutId);
-      setError("Erro ao conectar com o servidor.");
-      toast.error("Erro inesperado");
+      console.error("Erro inesperado no login:", err);
+      setError("Erro ao conectar com o servidor. Tente novamente.");
+      setLoading(false);
+      toast.error("Erro ao conectar. Tente novamente.");
     }
-
-    setLoading(false);
   }
 
   return (
@@ -100,37 +119,74 @@ function LoginForm() {
             Entre com suas credenciais
           </CardDescription>
         </CardHeader>
-
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" required disabled={loading} />
+              <Label
+                htmlFor="email"
+                className="text-[#2A2A2A] dark:text-white"
+              >
+                Email
+              </Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                required
+                placeholder="seu@email.com"
+                disabled={loading}
+                className="border-[#F4F4F4] dark:border-gray-700 bg-white dark:bg-gray-800 text-[#2A2A2A] dark:text-white focus:border-[#7BE4B7] focus:ring-[#7BE4B7]"
+              />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input id="password" name="password" type="password" required disabled={loading} />
+              <Label
+                htmlFor="password"
+                className="text-[#2A2A2A] dark:text:white"
+              >
+                Senha
+              </Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                required
+                placeholder="Sua senha"
+                disabled={loading}
+                className="border-[#F4F4F4] dark:border-gray-700 bg-white dark:bg-gray-800 text-[#2A2A2A] dark:text-white focus:border-[#7BE4B7] focus:ring-[#7BE4B7]"
+              />
             </div>
-
             {error && (
-              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
+              <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 p-3 rounded-md border border-red-200 dark:border-red-800">
                 {error}
               </div>
             )}
-
-            <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-[#7BE4B7] to-[#6ECBF5] text-white">
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-[#7BE4B7] to-[#6ECBF5] text-white hover:opacity-90 transition-opacity"
+              disabled={loading}
+            >
               {loading ? "Entrando..." : "Entrar"}
             </Button>
-
-            <div className="text-center text-sm">
-              <button type="button" onClick={() => router.push("/reset-password")} className="text-[#6ECBF5] hover:underline">
+            <div className="flex flex-col gap-2 text-center text-sm">
+              <button
+                type="button"
+                onClick={() => router.push("/reset-password")}
+                className="text-[#6ECBF5] hover:text-[#7BE4B7] hover:underline transition-colors"
+                disabled={loading}
+              >
                 Esqueceu a senha?
               </button>
-              <br />
-              <button type="button" onClick={() => router.push("/signup")} className="text-[#6ECBF5] hover:underline mt-2">
-                Criar conta
-              </button>
+              <div className="text-gray-600 dark:text-gray-400">
+                Não tem uma conta?{" "}
+                <button
+                  type="button"
+                  onClick={() => router.push("/signup")}
+                  className="text-[#6ECBF5] hover:text-[#7BE4B7] hover:underline transition-colors"
+                  disabled={loading}
+                >
+                  Criar conta
+                </button>
+              </div>
             </div>
           </form>
         </CardContent>
