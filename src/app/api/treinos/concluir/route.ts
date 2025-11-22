@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
 
-    const body = await req.json();
-    const { treino_id } = body;
+    const { treino_id, user_id } = await req.json();
 
     if (!treino_id) {
       return NextResponse.json(
@@ -16,22 +17,17 @@ export async function POST(req: Request) {
       );
     }
 
-    // Verifica usuário logado
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) {
+    if (!user_id) {
       return NextResponse.json(
         { error: "Usuário não autenticado." },
         { status: 401 }
       );
     }
 
-    // Criar registro de conclusão
+    // Registrar conclusão
     const { error } = await supabase.from("treinos_concluidos").insert({
       treino_id,
-      user_id: session.user.id,
+      user_id,
     });
 
     if (error) {
@@ -43,8 +39,8 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (e) {
-    console.error(e);
+  } catch (err) {
+    console.error(err);
     return NextResponse.json(
       { error: "Erro inesperado no servidor." },
       { status: 500 }
