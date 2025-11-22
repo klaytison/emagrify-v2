@@ -1,5 +1,7 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
+
 import { useEffect, useState } from "react";
 import { useSupabase } from "@/providers/SupabaseProvider";
 import Header from "@/components/Header";
