@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Dumbbell, Clock, Flame, ArrowLeft, Loader2 } from "lucide-react";
+import { Dumbbell, Clock, Flame, ArrowLeft, Loader2, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
+import { useSupabase } from "@/providers/SupabaseProvider";
 
 interface Treino {
   id: string;
@@ -30,8 +31,13 @@ export default function TreinoDetalhesPage() {
 
   const id = params?.id as string;
 
+  const { supabase, session } = useSupabase();
+
   const [treino, setTreino] = useState<Treino | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [favorito, setFavorito] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
 
   useEffect(() => {
     async function loadTreino() {
@@ -55,6 +61,59 @@ export default function TreinoDetalhesPage() {
 
     if (id) loadTreino();
   }, [id]);
+
+  // 🔥 1) Verificar se já é favorito
+  useEffect(() => {
+    async function checkFavorite() {
+      if (!session?.user?.id) return;
+
+      const { data } = await supabase
+        .from("treinos_favoritos")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .eq("treino_id", id)
+        .maybeSingle();
+
+      setFavorito(!!data);
+    }
+
+    checkFavorite();
+  }, [session, id, supabase]);
+
+  // 🔥 2) Função de favoritar / desfavoritar
+  async function toggleFavorito() {
+    if (!session?.user) {
+      alert("Você precisa estar logada para favoritar treinos.");
+      return;
+    }
+
+    setFavLoading(true);
+
+    try {
+      const res = await fetch("/api/treinos/favoritos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          treinoId: id,
+          action: favorito ? "remove" : "add",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error(data);
+        alert("Erro ao atualizar favorito.");
+        return;
+      }
+
+      setFavorito(!favorito);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setFavLoading(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -89,7 +148,6 @@ export default function TreinoDetalhesPage() {
         {/* CAPA */}
         <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
           {treino.imagem_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={treino.imagem_url}
               alt={treino.titulo}
@@ -100,9 +158,34 @@ export default function TreinoDetalhesPage() {
           )}
         </div>
 
-        {/* TÍTULO */}
+        {/* TÍTULO + FAVORITO */}
         <section className="space-y-3">
-          <h1 className="text-2xl md:text-3xl font-bold">{treino.titulo}</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl md:text-3xl font-bold">{treino.titulo}</h1>
+
+            <Button
+              onClick={toggleFavorito}
+              disabled={favLoading}
+              className={
+                favorito
+                  ? "bg-red-500 hover:bg-red-600 text-white"
+                  : "bg-emerald-500 hover:bg-emerald-600 text-white"
+              }
+            >
+              {favLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Heart
+                    className={`w-4 h-4 ${
+                      favorito ? "fill-white" : "fill-transparent"
+                    }`}
+                  />
+                  {favorito ? "Remover" : "Favoritar"}
+                </span>
+              )}
+            </Button>
+          </div>
 
           {treino.descricao && (
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
@@ -147,7 +230,7 @@ export default function TreinoDetalhesPage() {
           </section>
         )}
 
-        {/* LISTA DE EXERCÍCIOS */}
+        {/* EXERCÍCIOS */}
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Exercícios</h2>
 
