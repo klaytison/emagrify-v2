@@ -5,6 +5,7 @@ import { useSupabase } from "@/providers/SupabaseProvider";
 import Header from "@/components/Header";
 import { Loader2, Target, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 type Desafio = {
   id: string;
@@ -16,7 +17,7 @@ type Desafio = {
 };
 
 export default function DesafiosSemanaisPage() {
-  const { supabase, session } = useSupabase();
+  const { session } = useSupabase();
 
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -51,10 +52,9 @@ export default function DesafiosSemanaisPage() {
     setLoading(false);
   }
 
-  // Salvar progresso (marcar os dias)
+  // Salvar progresso semanal
   async function salvarProgresso() {
     if (!session?.user?.id) return;
-
     setSalvando(true);
 
     try {
@@ -78,7 +78,7 @@ export default function DesafiosSemanaisPage() {
     setSalvando(false);
   }
 
-  // Carregar assim que logar
+  // Carregar assim que o usuário estiver logado
   useEffect(() => {
     carregarDesafio();
   }, [session]);
@@ -161,8 +161,17 @@ export default function DesafiosSemanaisPage() {
           ))}
         </section>
 
-        {/* Botão salvar */}
-        <section className="pt-6 flex justify-end">
+        {/* Botões finais */}
+        <section className="pt-6 flex justify-between items-center">
+
+          {/* LINK PARA O HISTÓRICO */}
+          <Link
+            href="/desafios/historico"
+            className="text-sm text-gray-400 underline hover:text-gray-300 transition"
+          >
+            Ver histórico de semanas anteriores →
+          </Link>
+
           <Button
             onClick={salvarProgresso}
             disabled={salvando}
