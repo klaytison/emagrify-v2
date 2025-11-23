@@ -21,15 +21,9 @@ export default function DesafiosSemanaisPage() {
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [desafio, setDesafio] = useState<Desafio | null>(null);
-  const [progresso, setProgresso] = useState<boolean[]>([
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-  ]);
+  const [progresso, setProgresso] = useState<boolean[]>(
+    new Array(7).fill(false)
+  );
 
   // Carregar desafio da semana
   async function carregarDesafio() {
@@ -37,17 +31,21 @@ export default function DesafiosSemanaisPage() {
 
     setLoading(true);
 
-    const res = await fetch("/api/desafios/semana", {
-      headers: {
-        "x-user-id": session.user.id,
-      },
-    });
+    try {
+      const res = await fetch("/api/desafios/semana", {
+        headers: {
+          "x-user-id": session.user.id,
+        },
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (data?.desafio) {
-      setDesafio(data.desafio);
-      setProgresso(data.desafio.progresso);
+      if (data?.desafio) {
+        setDesafio(data.desafio);
+        setProgresso(data.desafio.progresso || new Array(7).fill(false));
+      }
+    } catch (e) {
+      console.error("Erro ao carregar desafio:", e);
     }
 
     setLoading(false);
@@ -59,23 +57,28 @@ export default function DesafiosSemanaisPage() {
 
     setSalvando(true);
 
-    const res = await fetch("/api/desafios/semana", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        userId: session.user.id,
-        progresso,
-      }),
-    });
+    try {
+      const res = await fetch("/api/desafios/semana", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: session.user.id,
+          progresso,
+        }),
+      });
 
-    const data = await res.json();
-    if (data?.desafio) setDesafio(data.desafio);
+      const data = await res.json();
+      if (data?.desafio) setDesafio(data.desafio);
+    } catch (e) {
+      console.error("Erro ao salvar progresso:", e);
+    }
 
     setSalvando(false);
   }
 
+  // Carregar assim que logar
   useEffect(() => {
     carregarDesafio();
   }, [session]);
@@ -101,7 +104,8 @@ export default function DesafiosSemanaisPage() {
       <Header />
 
       <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
-        {/* Título */}
+
+        {/* Cabeçalho */}
         <section className="space-y-2">
           <div className="inline-flex items-center gap-2 text-orange-400 bg-orange-400/10 px-3 py-1 text-xs rounded-full font-semibold">
             <Target className="w-3 h-3" />
@@ -109,7 +113,9 @@ export default function DesafiosSemanaisPage() {
           </div>
 
           <h1 className="text-3xl font-bold">{desafio?.titulo}</h1>
-          <p className="text-gray-600 dark:text-gray-400">{desafio?.descricao}</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            {desafio?.descricao}
+          </p>
         </section>
 
         {/* Barra de progresso */}
@@ -146,7 +152,11 @@ export default function DesafiosSemanaisPage() {
                   : "bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-500"
               }`}
             >
-              {progresso[index] ? <CheckCircle2 className="w-5 h-5 mx-auto" /> : dia}
+              {progresso[index] ? (
+                <CheckCircle2 className="w-5 h-5 mx-auto" />
+              ) : (
+                dia
+              )}
             </button>
           ))}
         </section>
