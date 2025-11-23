@@ -5,8 +5,6 @@ import { useSupabase } from "@/providers/SupabaseProvider";
 import Header from "@/components/Header";
 import { Loader2, Target, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-
 import { motion, AnimatePresence } from "framer-motion";
 
 type Desafio = {
@@ -24,13 +22,9 @@ export default function DesafiosSemanaisPage() {
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [desafio, setDesafio] = useState<Desafio | null>(null);
-
-  // progresso real
   const [progresso, setProgresso] = useState<boolean[]>(new Array(7).fill(false));
 
-  // porcentagem animada
-  const [pctAnimado, setPctAnimado] = useState(0);
-
+  // Carregar desafio
   async function carregarDesafio() {
     if (!session?.user?.id) return;
 
@@ -56,6 +50,7 @@ export default function DesafiosSemanaisPage() {
     setLoading(false);
   }
 
+  // Salvar progresso
   async function salvarProgresso() {
     if (!session?.user?.id) return;
 
@@ -86,28 +81,10 @@ export default function DesafiosSemanaisPage() {
     carregarDesafio();
   }, [session]);
 
-  // Atualizar porcentagem com animação suave
-  useEffect(() => {
-    const total = progresso.filter(Boolean).length;
-    const pct = Math.round((total / 7) * 100);
-
-    let atual = 0;
-    const anim = setInterval(() => {
-      atual++;
-      if (atual >= pct) {
-        atual = pct;
-        clearInterval(anim);
-      }
-      setPctAnimado(atual);
-    }, 10);
-
-    return () => clearInterval(anim);
-  }, [progresso]);
-
   if (!session?.user) {
     return (
       <div className="flex items-center justify-center min-h-screen text-gray-300">
-        Você precisa estar logada 😊
+        Você precisa estar logada para acessar seus desafios semanais 😊
       </div>
     );
   }
@@ -120,38 +97,36 @@ export default function DesafiosSemanaisPage() {
     );
   }
 
+  const progressoCount = progresso.filter(Boolean).length;
+  const progressoPercent = (progressoCount / 7) * 100;
+
   return (
     <motion.div
       className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
     >
       <Header />
 
-      <main className="max-w-4xl mx-auto px-4 py-10 space-y-10">
+      <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
 
         {/* Cabeçalho */}
-        <motion.section
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-        >
-          <div className="inline-flex items-center gap-2 text-orange-400 bg-orange-400/10 px-3 py-1 text-xs rounded-full font-semibold">
+        <section className="space-y-2">
+          <motion.div
+            className="inline-flex items-center gap-2 text-orange-400 bg-orange-400/10 px-3 py-1 text-xs rounded-full font-semibold"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+          >
             <Target className="w-3 h-3" />
             Desafios Semanais
-          </div>
+          </motion.div>
 
-          <h1 className="text-3xl font-bold mt-3">{desafio?.titulo}</h1>
+          <h1 className="text-3xl font-bold">{desafio?.titulo}</h1>
           <p className="text-gray-600 dark:text-gray-400">{desafio?.descricao}</p>
+        </section>
 
-          {/* botão histórico */}
-          <Link href="/desafios/historico">
-            <Button variant="outline" className="mt-4 border-gray-400">
-              Ver histórico de desafios
-            </Button>
-          </Link>
-        </motion.section>
-
-        {/* Barra de progresso animada */}
+        {/* Barra de progresso com animação */}
         <section className="space-y-3">
           <h2 className="text-sm font-semibold">Seu progresso</h2>
 
@@ -159,69 +134,71 @@ export default function DesafiosSemanaisPage() {
             <motion.div
               className="h-full bg-emerald-500"
               initial={{ width: 0 }}
-              animate={{ width: `${pctAnimado}%` }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
+              animate={{ width: `${progressoPercent}%` }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
             />
           </div>
 
+          {/* número animado */}
           <motion.p
-            className="text-sm text-gray-500 font-semibold"
-            key={pctAnimado}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            key={progressoCount}
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-sm text-gray-500"
           >
-            {pctAnimado}% completo
+            {progressoCount} de 7 dias completos
           </motion.p>
         </section>
 
         {/* Dias da semana */}
         <section className="grid grid-cols-7 gap-3">
-          {["S", "T", "Q", "Q", "S", "S", "D"].map((dia, index) => (
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              whileHover={{ scale: 1.05 }}
-              key={index}
-              onClick={() => {
-                const novo = [...progresso];
-                novo[index] = !novo[index];
-                setProgresso(novo);
-              }}
-              className={`p-4 rounded-xl border text-center transition ${
-                progresso[index]
-                  ? "bg-emerald-500 text-white border-emerald-600 shadow-lg shadow-emerald-500/20"
-                  : "bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-500"
-              }`}
-            >
-              <AnimatePresence mode="wait">
-                {progresso[index] ? (
-                  <motion.div
-                    key="icon"
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 200, damping: 10 }}
-                  >
-                    <CheckCircle2 className="w-5 h-5 mx-auto" />
-                  </motion.div>
-                ) : (
-                  <motion.span
-                    key="text"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="font-semibold"
-                  >
-                    {dia}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </motion.button>
-          ))}
+          {["S", "T", "Q", "Q", "S", "S", "D"].map((dia, index) => {
+            const marcado = progresso[index];
+
+            return (
+              <motion.button
+                key={index}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => {
+                  const novo = [...progresso];
+                  novo[index] = !novo[index];
+                  setProgresso(novo);
+                }}
+                className={`p-4 rounded-xl border text-center transition ${
+                  marcado
+                    ? "bg-emerald-500 text-white border-emerald-600"
+                    : "bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-500"
+                }`}
+              >
+                <AnimatePresence mode="popLayout">
+                  {marcado ? (
+                    <motion.div
+                      key="check"
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                    >
+                      <CheckCircle2 className="w-5 h-5 mx-auto" />
+                    </motion.div>
+                  ) : (
+                    <motion.span
+                      key="letter"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      {dia}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+            );
+          })}
         </section>
 
         {/* Botão salvar */}
         <section className="pt-6 flex justify-end">
-          <motion.div whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.03 }}>
+          <motion.div whileTap={{ scale: 0.95 }}>
             <Button
               onClick={salvarProgresso}
               disabled={salvando}
