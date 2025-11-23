@@ -170,6 +170,7 @@ export default function MonitoramentoPage() {
       <Header />
 
       <main className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+
         {/* Cabeçalho */}
         <section className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="space-y-2">
@@ -182,8 +183,7 @@ export default function MonitoramentoPage() {
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 max-w-xl">
               Registre peso, medidas, passos, calorias e humor em poucos segundos.
-              O Emagrify usa esses dados para ajustar planos, desafios e treinos
-              adaptados (e no futuro, a IA vai te orientar ainda mais).
+              O Emagrify usa esses dados para ajustar planos, desafios e treinos adaptados.
             </p>
           </div>
 
@@ -198,9 +198,6 @@ export default function MonitoramentoPage() {
               onChange={(e) => setDiaSelecionado(e.target.value)}
               className="bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-sm"
             />
-            <p className="text-[11px] text-gray-500 dark:text-gray-500">
-              Você pode voltar em dias anteriores para revisar ou ajustar dados.
-            </p>
           </div>
         </section>
 
@@ -217,13 +214,13 @@ export default function MonitoramentoPage() {
         )}
         {deslogada && (
           <div className="rounded-xl border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-100">
-            Você não está logada. Entre na sua conta para registrar e salvar seu
-            progresso diário.
+            Você não está logada. Entre para registrar seu progresso.
           </div>
         )}
 
         {/* Cards principais */}
         <section className="grid md:grid-cols-3 gap-4">
+          {/* Peso & Gordura */}
           <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/70 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs uppercase tracking-wide text-gray-500">
@@ -239,7 +236,6 @@ export default function MonitoramentoPage() {
                   step="0.1"
                   value={peso}
                   onChange={(e) => setPeso(e.target.value)}
-                  className="bg-gray-900/5 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-sm"
                 />
               </div>
               <div className="space-y-1">
@@ -249,12 +245,12 @@ export default function MonitoramentoPage() {
                   step="0.1"
                   value={gordura}
                   onChange={(e) => setGordura(e.target.value)}
-                  className="bg-gray-900/5 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-sm"
                 />
               </div>
             </div>
           </div>
 
+          {/* Medidas */}
           <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/70 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs uppercase tracking-wide text-gray-500">
@@ -269,7 +265,6 @@ export default function MonitoramentoPage() {
                   type="number"
                   value={cintura}
                   onChange={(e) => setCintura(e.target.value)}
-                  className="bg-gray-900/5 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-sm"
                 />
               </div>
               <div className="space-y-1">
@@ -278,7 +273,6 @@ export default function MonitoramentoPage() {
                   type="number"
                   value={quadril}
                   onChange={(e) => setQuadril(e.target.value)}
-                  className="bg-gray-900/5 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-sm"
                 />
               </div>
               <div className="space-y-1">
@@ -287,12 +281,12 @@ export default function MonitoramentoPage() {
                   type="number"
                   value={peito}
                   onChange={(e) => setPeito(e.target.value)}
-                  className="bg-gray-900/5 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-sm"
                 />
               </div>
             </div>
           </div>
 
+          {/* Atividade */}
           <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/70 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs uppercase tracking-wide text-gray-500">
@@ -307,7 +301,6 @@ export default function MonitoramentoPage() {
                   type="number"
                   value={passos}
                   onChange={(e) => setPassos(e.target.value)}
-                  className="bg-gray-900/5 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-sm"
                 />
               </div>
               <div className="space-y-1">
@@ -316,7 +309,6 @@ export default function MonitoramentoPage() {
                   type="number"
                   value={calIn}
                   onChange={(e) => setCalIn(e.target.value)}
-                  className="bg-gray-900/5 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-sm"
                 />
               </div>
               <div className="space-y-1">
@@ -325,31 +317,28 @@ export default function MonitoramentoPage() {
                   type="number"
                   value={calOut}
                   onChange={(e) => setCalOut(e.target.value)}
-                  className="bg-gray-900/5 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-sm"
                 />
               </div>
             </div>
           </div>
         </section>
 
-        {/* Humor + notas */}
+        {/* Humor + Notas */}
         <section className="grid md:grid-cols-[1.2fr,1.8fr] gap-4">
+          {/* Humor */}
           <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/70 p-4 space-y-3">
             <div className="flex items-center gap-2">
               <Smile className="w-4 h-4 text-emerald-400" />
               <span className="text-sm font-semibold">Como você se sentiu hoje?</span>
             </div>
             <Input
-              placeholder="Ex: Motivada, cansada, com dor de cabeça, mais confiante…"
+              placeholder="Ex: Motivada, cansada…"
               value={humor}
               onChange={(e) => setHumor(e.target.value)}
-              className="bg-gray-900/5 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-sm"
             />
-            <p className="text-[11px] text-gray-500">
-              Isso ajuda a identificar gatilhos de compulsão, TPM, estresse, etc.
-            </p>
           </div>
 
+          {/* Notas */}
           <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/70 p-4 space-y-3">
             <div className="flex items-center gap-2">
               <Droplet className="w-4 h-4 text-sky-400" />
@@ -357,12 +346,21 @@ export default function MonitoramentoPage() {
             </div>
             <Textarea
               rows={3}
-              placeholder="Ex: Dormi pouco, pulei o treino, comi fora, menstruação começou, fiz caminhada extra…"
+              placeholder="Ex: Dormi pouco, comi fora…"
               value={notas}
               onChange={(e) => setNotas(e.target.value)}
-              className="bg-gray-900/5 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-sm"
             />
           </div>
+        </section>
+
+        {/* Botão – Ver Gráficos Detalhados */}
+        <section className="pt-4">
+          <Button
+            onClick={() => window.location.href = "/monitoramento/graficos"}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl"
+          >
+            📊 Ver gráficos detalhados
+          </Button>
         </section>
 
         {/* Botão salvar */}
