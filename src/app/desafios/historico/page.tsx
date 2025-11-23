@@ -3,41 +3,56 @@
 import { useEffect, useState } from "react";
 import { useSupabase } from "@/providers/SupabaseProvider";
 import Header from "@/components/Header";
-import { Loader2, Calendar, CheckCircle2 } from "lucide-react";
+import { Loader2, Target } from "lucide-react";
 import Link from "next/link";
 
+type Desafio = {
+  id: string;
+  semana: string;
+  titulo: string;
+  descricao: string;
+  progresso: boolean[];
+};
+
 export default function HistoricoDesafiosPage() {
-  const { session } = useSupabase();
+  const { supabase, session } = useSupabase();
 
   const [loading, setLoading] = useState(true);
-  const [historico, setHistorico] = useState<any[]>([]);
+  const [desafios, setDesafios] = useState<Desafio[]>([]);
 
-  async function carregarHistorico() {
+  async function carregar() {
+    if (!session?.user) return;
+
     setLoading(true);
 
-    const res = await fetch("/api/desafios/historico");
-    const data = await res.json();
+    const { data, error } = await supabase
+      .from("desafios_semanais")
+      .select("*")
+      .eq("user_id", session.user.id)
+      .order("semana", { ascending: false });
 
-    if (data?.historico) setHistorico(data.historico);
+    if (!error && data) {
+      setDesafios(data as any);
+    }
 
     setLoading(false);
   }
 
   useEffect(() => {
-    carregarHistorico();
-  }, []);
+    carregar();
+  }, [session]);
 
   if (!session?.user) {
     return (
-      <div className="flex items-center justify-center min-h-screen text-gray-400">
-        Você precisa estar logada para ver o histórico 🩵
+      <div className="min-h-screen flex items-center justify-center text-gray-400">
+        Você precisa estar logada.
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen text-gray-400">
+      <div className="min-h-screen flex items-center justify-center text-gray-400">
         <Loader2 className="w-6 h-6 animate-spin" />
       </div>
     );
@@ -47,47 +62,54 @@ export default function HistoricoDesafiosPage() {
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50">
       <Header />
 
-      <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Calendar className="w-6 h-6 text-orange-400" />
-          Histórico de Desafios Semanais
-        </h1>
+      <main className="max-w-4xl mx-auto px-4 py-10 space-y-6">
 
-        <div className="space-y-4">
-          {historico.length === 0 && (
-            <p className="text-gray-500">
-              Nenhum desafio anterior encontrado.
-            </p>
-          )}
+        <div className="inline-flex items-center gap-2 text-orange-400 bg-orange-400/10 px-3 py-1 text-xs rounded-full font-semibold">
+          <Target className="w-3 h-3" />
+          Histórico de Desafios
+        </div>
 
-          {historico.map((d) => {
-            const completados = d.progresso?.filter(Boolean).length ?? 0;
-            const porcentagem = Math.round((completados / 7) * 100);
-            const completo = completados === 7;
+        <h1 className="text-3xl font-bold">Seu histórico</h1>
+        <p className="text-gray-600 dark:text-gray-400 text-sm">
+          Veja todos os desafios semanais que você já completou ou participou.
+        </p>
+
+        <div className="space-y-4 pt-4">
+
+          {desafios.map((d) => {
+            const completados = d.progresso.filter(Boolean).length;
+            const pct = (completados / 7) * 100;
 
             return (
-              <div
+              <Link
                 key={d.id}
-                className="border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex justify-between items-center bg-gray-50 dark:bg-gray-900/40"
+                href={`/desafios/${d.semana}`}
+                className="block rounded-2xl border border-gray-200 dark:border-gray-800 p-5 hover:bg-gray-50/50 dark:hover:bg-gray-900/60 transition"
               >
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-400">{d.semana}</p>
-                  <h2 className="font-semibold">{d.titulo}</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {completados}/7 dias — {porcentagem}% concluído
-                  </p>
+                <div className="flex justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold">{d.titulo}</h2>
+                    <p className="text-sm text-gray-500">{d.descricao}</p>
+                    <p className="text-xs mt-2 text-gray-400">
+                      Semana {d.semana}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  {completo ? (
-                    <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-                  ) : (
-                    <span className="text-gray-500 text-xs">Em andamento</span>
-                  )}
+                <div className="w-full h-2 bg-gray-200 dark:bg-gray-800 rounded-full mt-3 overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 transition-all"
+                    style={{ width: `${pct}%` }}
+                  ></div>
                 </div>
-              </div>
+
+                <p className="text-xs text-gray-500 mt-1">
+                  {completados} de 7 dias concluídos
+                </p>
+              </Link>
             );
           })}
+
         </div>
       </main>
     </div>
