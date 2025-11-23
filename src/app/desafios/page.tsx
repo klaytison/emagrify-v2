@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSupabase } from "@/providers/SupabaseProvider";
 import Header from "@/components/Header";
@@ -24,6 +24,54 @@ export default function DesafiosSemanaisPage() {
   const [salvando, setSalvando] = useState(false);
   const [desafio, setDesafio] = useState<Desafio | null>(null);
   const [progresso, setProgresso] = useState<boolean[]>(new Array(7).fill(false));
+
+  // 🔊 Som para mensagens motivacionais
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!audioRef.current) {
+      // Coloque um arquivo em /public/sounds/desafio-pop.mp3
+      audioRef.current = new Audio("/sounds/desafio-pop.mp3");
+      audioRef.current.volume = 0.4;
+    }
+  }, []);
+
+  // ⭐ Mensagem motivacional (ETAPA C)
+  const [mensagem, setMensagem] = useState("");
+
+  useEffect(() => {
+    const total = progresso.filter(Boolean).length;
+
+    if (total === 0) {
+      setMensagem("Toda jornada começa com o primeiro passo! Você consegue 💚");
+    } else if (total <= 2) {
+      setMensagem("Ótimo começo! Continue assim ✨");
+    } else if (total < 4) {
+      setMensagem("Metade da semana concluída! Você está indo muito bem 🔥");
+    } else if (total < 6) {
+      setMensagem("Você está muito perto de completar o desafio! 🏅");
+    } else if (total < 7) {
+      setMensagem("Desafio quase completo! Orgulho demais 🧡");
+    } else {
+      setMensagem("Desafio da semana completo! Perfeita demais! 🏆");
+    }
+  }, [progresso]);
+
+  // Toca o som sempre que a mensagem mudar
+  useEffect(() => {
+    if (!mensagem) return;
+    if (!audioRef.current) return;
+
+    try {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(() => {
+        // se o navegador bloquear autoplay, só ignora
+      });
+    } catch {
+      // ignora erros de áudio
+    }
+  }, [mensagem]);
 
   // Carregar desafio da semana atual
   async function carregarDesafio() {
@@ -100,7 +148,6 @@ export default function DesafiosSemanaisPage() {
 
   const progressoCount = progresso.filter(Boolean).length;
   const progressoPercent = (progressoCount / 7) * 100;
-
   const semanaAtual = desafio?.semana;
 
   return (
@@ -143,6 +190,37 @@ export default function DesafiosSemanaisPage() {
             {desafio?.descricao}
           </motion.p>
         </section>
+
+        {/* 💬 Mensagem motivacional com animação bonita */}
+        <AnimatePresence>
+          {mensagem && (
+            <motion.div
+              key={mensagem}
+              initial={{ opacity: 0, y: 10, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.97 }}
+              transition={{ duration: 0.35 }}
+              className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-emerald-400/5 to-transparent px-4 py-3"
+            >
+              {/* Glow animado de fundo */}
+              <motion.div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.25),_transparent_55%)]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6 }}
+              />
+              <div className="relative flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/20">
+                  <Target className="w-4 h-4 text-emerald-300" />
+                </div>
+                <p className="text-sm text-emerald-50 dark:text-emerald-100">
+                  {mensagem}
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Card principal do desafio */}
         <motion.section
