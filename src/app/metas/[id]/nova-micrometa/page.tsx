@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSupabase } from "@/providers/SupabaseProvider";
 import { useParams, useRouter } from "next/navigation";
 import Header from "@/components/Header";
@@ -9,6 +9,14 @@ import { Loader2, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+
+// 🔊 URLs de áudio externos (pode trocar depois por sons curtinhos)
+const OPEN_SOUND_URL =
+  "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+const SUCCESS_SOUND_URL =
+  "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3";
+const ERROR_SOUND_URL =
+  "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3";
 
 export default function NovaMicroMetaPage() {
   const { supabase, session } = useSupabase();
@@ -22,10 +30,57 @@ export default function NovaMicroMetaPage() {
   const [semana, setSemana] = useState<number>(1);
   const [salvando, setSalvando] = useState(false);
 
+  // 🔊 Refs pros sons
+  const openSoundRef = useRef<HTMLAudioElement | null>(null);
+  const successSoundRef = useRef<HTMLAudioElement | null>(null);
+  const errorSoundRef = useRef<HTMLAudioElement | null>(null);
+
+  // 🔊 Inicializar áudios (só no cliente)
+  useEffect(() => {
+    if (typeof Audio === "undefined") return;
+
+    openSoundRef.current = new Audio(OPEN_SOUND_URL);
+    successSoundRef.current = new Audio(SUCCESS_SOUND_URL);
+    errorSoundRef.current = new Audio(ERROR_SOUND_URL);
+
+    // volume mais baixo para não assustar
+    if (openSoundRef.current) openSoundRef.current.volume = 0.2;
+    if (successSoundRef.current) successSoundRef.current.volume = 0.25;
+    if (errorSoundRef.current) errorSoundRef.current.volume = 0.25;
+
+    // tocar um sonzinho suave quando a tela abre (não é garantido em todos navegadores,
+    // alguns bloqueiam autoplay, mas não quebra nada)
+    try {
+      openSoundRef.current?.play().catch(() => {
+        // se o navegador bloquear, ignoramos
+      });
+    } catch {
+      // nada
+    }
+  }, []);
+
+  function playSound(audioRef: React.RefObject<HTMLAudioElement>) {
+    try {
+      const el = audioRef.current;
+      if (!el) return;
+      // reseta pro começo pra poder tocar várias vezes
+      el.currentTime = 0;
+      el.play().catch(() => {
+        // se der erro (navegador bloqueou), só ignora
+      });
+    } catch {
+      // ignora
+    }
+  }
+
   async function salvar() {
     if (!session?.user) return;
 
-    if (!titulo.trim()) return alert("O título é obrigatório.");
+    if (!titulo.trim()) {
+      playSound(errorSoundRef);
+      alert("O título é obrigatório.");
+      return;
+    }
 
     setSalvando(true);
 
@@ -41,10 +96,13 @@ export default function NovaMicroMetaPage() {
 
     if (error) {
       console.error(error);
+      playSound(errorSoundRef);
       alert("Erro ao salvar micro-meta.");
       return;
     }
 
+    // 🔊 Sucesso
+    playSound(successSoundRef);
     router.push(`/metas/${metaId}`);
   }
 
@@ -70,7 +128,8 @@ export default function NovaMicroMetaPage() {
 
           <h1 className="text-2xl font-bold">Criar micro-meta</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Divida sua meta principal em partes menores para garantir que você continue avançando semana após semana.
+            Divida sua meta principal em partes menores para garantir que você
+            continue avançando semana após semana.
           </p>
         </motion.div>
 
@@ -82,7 +141,9 @@ export default function NovaMicroMetaPage() {
         >
           {/* Campo título */}
           <div className="space-y-1">
-            <label className="text-xs text-gray-500">Título da micro-meta</label>
+            <label className="text-xs text-gray-500">
+              Título da micro-meta
+            </label>
             <Input
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
@@ -93,7 +154,9 @@ export default function NovaMicroMetaPage() {
 
           {/* Campo descrição */}
           <div className="space-y-1">
-            <label className="text-xs text-gray-500">Descrição (opcional)</label>
+            <label className="text-xs text-gray-500">
+              Descrição (opcional)
+            </label>
             <Textarea
               rows={3}
               value={descricao}
@@ -118,7 +181,10 @@ export default function NovaMicroMetaPage() {
         </motion.div>
 
         {/* Botão salvar */}
-        <motion.div whileTap={{ scale: 0.95 }} className="pt-4 flex justify-end">
+        <motion.div
+          whileTap={{ scale: 0.95 }}
+          className="pt-4 flex justify-end"
+        >
           <Button
             onClick={salvar}
             disabled={salvando}
