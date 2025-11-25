@@ -5,7 +5,12 @@ import "./globals.css";
 import "../lib/fonts";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SupabaseProvider } from "@/providers/SupabaseProvider";
-import { Toaster } from "@/components/ui/use-toast"; // 🟩 Toasts do Shadcn
+
+// 🟢 IMPORTANTE: importar o ToastProvider do seu arquivo toast.ts
+import { ToastProvider } from "@/components/ui/toast";
+
+// 🟢 E o Toaster do use-toast.tsx
+import { Toaster } from "@/components/ui/use-toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,9 +30,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="pt-BR">
       <head>
@@ -37,13 +42,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* Tema global + Supabase */}
         <ThemeProvider>
           <SupabaseProvider>
-            {children}
+            {/* 🟢 RADIX TOAST PROVIDER ENVOLVENDO TODO O APP */}
+            <ToastProvider>
+              {children}
 
-            {/* 🟩 Toasts globais funcionando no app inteiro */}
-            <Toaster />
+              {/* 🟢 Toaster funcionando dentro do provider */}
+              <Toaster />
+            </ToastProvider>
           </SupabaseProvider>
         </ThemeProvider>
       </body>
