@@ -2,6 +2,14 @@
 
 import * as React from "react"
 
+import {
+  Toast,
+  ToastTitle,
+  ToastDescription,
+  ToastClose,
+  ToastViewport,
+} from "@/components/ui/toast"
+
 import type {
   ToastActionElement,
   ToastProps,
@@ -25,7 +33,6 @@ const actionTypes = {
 } as const
 
 let count = 0
-
 function genId() {
   count = (count + 1) % Number.MAX_SAFE_INTEGER
   return count.toString()
@@ -34,22 +41,10 @@ function genId() {
 type ActionType = typeof actionTypes
 
 type Action =
-  | {
-      type: ActionType["ADD_TOAST"]
-      toast: ToasterToast
-    }
-  | {
-      type: ActionType["UPDATE_TOAST"]
-      toast: Partial<ToasterToast>
-    }
-  | {
-      type: ActionType["DISMISS_TOAST"]
-      toastId?: ToasterToast["id"]
-    }
-  | {
-      type: ActionType["REMOVE_TOAST"]
-      toastId?: ToasterToast["id"]
-    }
+  | { type: ActionType["ADD_TOAST"]; toast: ToasterToast }
+  | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast> }
+  | { type: ActionType["DISMISS_TOAST"]; toastId?: string }
+  | { type: ActionType["REMOVE_TOAST"]; toastId?: string }
 
 interface State {
   toasts: ToasterToast[]
@@ -58,16 +53,11 @@ interface State {
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 
 const addToRemoveQueue = (toastId: string) => {
-  if (toastTimeouts.has(toastId)) {
-    return
-  }
+  if (toastTimeouts.has(toastId)) return
 
   const timeout = setTimeout(() => {
     toastTimeouts.delete(toastId)
-    dispatch({
-      type: "REMOVE_TOAST",
-      toastId,
-    })
+    dispatch({ type: "REMOVE_TOAST", toastId })
   }, TOAST_REMOVE_DELAY)
 
   toastTimeouts.set(toastId, timeout)
@@ -89,27 +79,14 @@ export const reducer = (state: State, action: Action): State => {
         ),
       }
 
-    case "DISMISS_TOAST": {
-      const { toastId } = action
-
-      if (toastId) {
-        addToRemoveQueue(toastId)
-      } else {
-        state.toasts.forEach((toast) => addToRemoveQueue(toast.id))
-      }
-
+    case "DISMISS_TOAST":
       return {
         ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === toastId || toastId === undefined
-            ? {
-                ...t,
-                open: false,
-              }
-            : t
-        ),
+        toasts: state.toasts.map((t) => ({
+          ...t,
+          open: false,
+        })),
       }
-    }
 
     case "REMOVE_TOAST":
       return {
@@ -130,14 +107,6 @@ function dispatch(action: Action) {
 export function toast(props: ToastProps) {
   const id = genId()
 
-  const update = (props: ToasterToast) =>
-    dispatch({
-      type: "UPDATE_TOAST",
-      toast: { ...props, id },
-    })
-
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
-
   dispatch({
     type: "ADD_TOAST",
     toast: {
@@ -145,20 +114,24 @@ export function toast(props: ToastProps) {
       id,
       open: true,
       onOpenChange: (open: boolean) => {
-        if (!open) dismiss()
+        if (!open) dispatch({ type: "DISMISS_TOAST", toastId: id })
       },
     },
   })
 
   return {
     id,
-    dismiss,
-    update,
+    dismiss: () => dispatch({ type: "DISMISS_TOAST", toastId: id }),
+    update: (props: Partial<ToasterToast>) =>
+      dispatch({
+        type: "UPDATE_TOAST",
+        toast: { ...props, id },
+      }),
   }
 }
 
 export function useToast() {
-  const [state, setState] = React.useState<State>(memoryState)
+  const [state, setState] = React.useState(memoryState)
 
   React.useEffect(() => {
     listeners.push(setState)
@@ -168,10 +141,7 @@ export function useToast() {
     }
   }, [])
 
-  return {
-    ...state,
-    toast,
-  }
+  return { ...state, toast }
 }
 
 export function Toaster() {
@@ -179,28 +149,15 @@ export function Toaster() {
 
   return (
     <>
-      {toasts.map(function ({
-        id,
-        title,
-        description,
-        action,
-        ...props
-      }) {
-        return (
-          <Toast
-            key={id}
-            {...props}
-          >
-            {title && <Toast.Title>{title}</Toast.Title>}
-            {description && (
-              <Toast.Description>{description}</Toast.Description>
-            )}
-            {action}
-            <Toast.Close />
-          </Toast>
-        )
-      })}
-      <Toast.Viewport />
+      {toasts.map(({ id, title, description, action, ...props }) => (
+        <Toast key={id} {...props}>
+          {title && <ToastTitle>{title}</ToastTitle>}
+          {description && <ToastDescription>{description}</ToastDescription>}
+          {action}
+          <ToastClose />
+        </Toast>
+      ))}
+      <ToastViewport />
     </>
   )
 }
