@@ -6,7 +6,21 @@ import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Header from "@/components/Header";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Plus, CheckCircle2, XCircle, ArrowLeft } from "lucide-react";
+
+// Ícones
+import {
+  Loader2,
+  Plus,
+  CheckCircle2,
+  XCircle,
+  ArrowLeft,
+} from "lucide-react";
+
+// Gamificação
+import { adicionarXP } from "@/lib/gamificacao";
+
+// Animação de confete
+import { soltarConfete } from "@/components/animations/Confetti";
 
 interface MicroMeta {
   id: string;
@@ -17,14 +31,18 @@ interface MicroMeta {
 }
 
 export default function MicroMetasListPage() {
-  const { supabase } = useSupabase();
+  const { supabase, session } = useSupabase();
   const params = useParams();
   const router = useRouter();
 
   const metaId = params.id as string;
+
   const [microMetas, setMicroMetas] = useState<MicroMeta[]>([]);
   const [loading, setLoading] = useState(true);
 
+  //----------------------------------------------------
+  // 🔵 CARREGAR MICRO-METAS
+  //----------------------------------------------------
   async function carregarMicroMetas() {
     setLoading(true);
 
@@ -46,6 +64,9 @@ export default function MicroMetasListPage() {
     setLoading(false);
   }
 
+  //----------------------------------------------------
+  // 🟢 CONCLUIR / DESMARCAR MICRO-META
+  //----------------------------------------------------
   async function concluirMicroMeta(id: string, concluido: boolean) {
     const { error } = await supabase
       .from("micro_metas")
@@ -57,19 +78,41 @@ export default function MicroMetasListPage() {
         title: "Erro ao atualizar",
         description: "Não foi possível alterar o status.",
       });
+      return;
+    }
+
+    if (!concluido) {
+      // Só dá XP quando marca como concluída
+      await adicionarXP(supabase, session!.user.id, 15);
+
+      // Confete 🎉
+      soltarConfete();
+
+      // Som de vitória fofinho
+      const audio = new Audio(
+        "https://cdn.pixabay.com/audio/2022/03/15/audio_f9ad01afee.mp3"
+      );
+      audio.volume = 0.3;
+      audio.play();
+
+      toast({
+        title: "Micro-meta concluída! 🎉",
+        description: "Você ganhou +15 XP",
+      });
     } else {
       toast({
-        title: concluido ? "Marcada como pendente" : "Concluída 🎉",
+        title: "Micro-meta marcada como pendente",
       });
-      carregarMicroMetas();
     }
+
+    carregarMicroMetas();
   }
 
+  //----------------------------------------------------
+  // 🔴 EXCLUIR MICRO-META
+  //----------------------------------------------------
   async function excluirMicroMeta(id: string) {
-    const { error } = await supabase
-      .from("micro_metas")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("micro_metas").delete().eq("id", id);
 
     if (error) {
       toast({
@@ -77,17 +120,21 @@ export default function MicroMetasListPage() {
         description: "Não foi possível remover a micro-meta.",
       });
     } else {
-      toast({
-        title: "Micro-meta removida",
-      });
+      toast({ title: "Micro-meta removida" });
       carregarMicroMetas();
     }
   }
 
+  //----------------------------------------------------
+  // 🔄 CARREGAR AO ABRIR A TELA
+  //----------------------------------------------------
   useEffect(() => {
     carregarMicroMetas();
   }, []);
 
+  //----------------------------------------------------
+  // 🖥️ UI
+  //----------------------------------------------------
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -140,16 +187,21 @@ export default function MicroMetasListPage() {
                 key={mm.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 flex justify-between items-start"
+                className={`bg-slate-900/40 border rounded-xl p-4 flex justify-between items-start transition ${
+                  mm.concluido
+                    ? "border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+                    : "border-slate-800"
+                }`}
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs px-2 py-0.5 bg-slate-800 rounded-md text-slate-300">
                       Semana {mm.semana}
                     </span>
-
                     {mm.concluido && (
-                      <span className="text-emerald-400 text-xs">Concluída</span>
+                      <span className="text-emerald-400 text-xs font-semibold">
+                        ✔ Concluída
+                      </span>
                     )}
                   </div>
 
@@ -161,6 +213,7 @@ export default function MicroMetasListPage() {
                 </div>
 
                 <div className="flex flex-col gap-2 ml-6">
+                  {/* Alternar concluído */}
                   <button
                     onClick={() => concluirMicroMeta(mm.id, mm.concluido)}
                     className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition"
@@ -172,6 +225,7 @@ export default function MicroMetasListPage() {
                     )}
                   </button>
 
+                  {/* Excluir */}
                   <button
                     onClick={() => excluirMicroMeta(mm.id)}
                     className="p-2 rounded-lg bg-slate-800 hover:bg-red-800/40 transition"
