@@ -1,22 +1,20 @@
+"use client"
+
 import * as React from "react"
 
-import {
-  Toast,
-  ToastClose,
-  ToastDescription,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
+import type {
+  ToastActionElement,
+  ToastProps,
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
 
-type ToasterToast = {
+type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
-  action?: React.ReactNode
+  action?: ToastActionElement
 }
 
 const actionTypes = {
@@ -28,7 +26,7 @@ const actionTypes = {
 
 let count = 0
 
-function generateId() {
+function genId() {
   count = (count + 1) % Number.MAX_SAFE_INTEGER
   return count.toString()
 }
@@ -60,7 +58,9 @@ interface State {
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 
 const addToRemoveQueue = (toastId: string) => {
-  if (toastTimeouts.has(toastId)) return
+  if (toastTimeouts.has(toastId)) {
+    return
+  }
 
   const timeout = setTimeout(() => {
     toastTimeouts.delete(toastId)
@@ -78,7 +78,7 @@ export const reducer = (state: State, action: Action): State => {
     case "ADD_TOAST":
       return {
         ...state,
-        toasts: [...state.toasts, action.toast],
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
       }
 
     case "UPDATE_TOAST":
@@ -95,17 +95,16 @@ export const reducer = (state: State, action: Action): State => {
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
-        state.toasts.forEach((toast) => {
-          addToRemoveQueue(toast.id)
-        })
+        state.toasts.forEach((toast) => addToRemoveQueue(toast.id))
       }
 
       return {
         ...state,
         toasts: state.toasts.map((t) =>
-          t.id === toastId || toastId == null
+          t.id === toastId || toastId === undefined
             ? {
                 ...t,
+                open: false,
               }
             : t
         ),
@@ -121,26 +120,17 @@ export const reducer = (state: State, action: Action): State => {
 }
 
 const listeners: Array<(state: State) => void> = []
-
 let memoryState: State = { toasts: [] }
 
 function dispatch(action: Action) {
   memoryState = reducer(memoryState, action)
-  listeners.forEach((listener) => {
-    listener(memoryState)
-  })
+  listeners.forEach((listener) => listener(memoryState))
 }
 
-type ToastProps = {
-  title?: React.ReactNode
-  description?: React.ReactNode
-  action?: React.ReactNode
-}
+export function toast(props: ToastProps) {
+  const id = genId()
 
-export function toast({ title, description, action }: ToastProps) {
-  const id = generateId()
-
-  const update = (props: Partial<ToasterToast>) =>
+  const update = (props: ToasterToast) =>
     dispatch({
       type: "UPDATE_TOAST",
       toast: { ...props, id },
@@ -151,10 +141,12 @@ export function toast({ title, description, action }: ToastProps) {
   dispatch({
     type: "ADD_TOAST",
     toast: {
+      ...props,
       id,
-      title,
-      description,
-      action,
+      open: true,
+      onOpenChange: (open: boolean) => {
+        if (!open) dismiss()
+      },
     },
   })
 
@@ -174,7 +166,7 @@ export function useToast() {
       const index = listeners.indexOf(setState)
       if (index > -1) listeners.splice(index, 1)
     }
-  }, [state])
+  }, [])
 
   return {
     ...state,
@@ -186,20 +178,29 @@ export function Toaster() {
   const { toasts } = useToast()
 
   return (
-    <ToastProvider>
-      {toasts.map(function ({ id, title, description, action }) {
+    <>
+      {toasts.map(function ({
+        id,
+        title,
+        description,
+        action,
+        ...props
+      }) {
         return (
-          <Toast key={id}>
-            {title && <ToastTitle>{title}</ToastTitle>}
+          <Toast
+            key={id}
+            {...props}
+          >
+            {title && <Toast.Title>{title}</Toast.Title>}
             {description && (
-              <ToastDescription>{description}</ToastDescription>
+              <Toast.Description>{description}</Toast.Description>
             )}
             {action}
-            <ToastClose />
+            <Toast.Close />
           </Toast>
         )
       })}
-      <ToastViewport />
-    </ToastProvider>
+      <Toast.Viewport />
+    </>
   )
 }
