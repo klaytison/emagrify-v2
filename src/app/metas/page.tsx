@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSupabase } from "@/providers/SupabaseProvider";
 import Header from "@/components/Header";
-import { Loader2, Target, PlusCircle } from "lucide-react";
+import { Loader2, Target, PlusCircle, ListTodo, History } from "lucide-react";
 import { motion } from "framer-motion";
 
 type Meta = {
@@ -63,8 +63,11 @@ export default function MetasPage() {
     >
       <Header />
 
-      <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
-        {/* Título */}
+      <main className="max-w-4xl mx-auto px-4 py-10 space-y-10">
+
+        {/* ========================= */}
+        {/* TÍTULO */}
+        {/* ========================= */}
         <motion.div
           initial={{ y: -10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -77,26 +80,60 @@ export default function MetasPage() {
 
           <h1 className="text-3xl font-bold">Suas metas principais</h1>
           <p className="text-gray-600 dark:text-gray-400 max-w-lg">
-            Defina objetivos realistas e receba micro-metas semanais automaticamente.
+            Defina metas claras, acompanhe sua jornada e receba micro-metas semanais para manter a motivação.
           </p>
         </motion.div>
 
-        {/* Botão criar meta */}
-        <div>
+        {/* ========================= */}
+        {/* BARRA DE ATALHOS */}
+        {/* ========================= */}
+        <motion.div
+          className="flex flex-wrap gap-3 pt-2"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
           <Link href="/metas/nova">
-            <button className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2 rounded-xl">
+            <button className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm shadow">
               <PlusCircle className="w-4 h-4" />
-              Criar nova meta
+              Criar meta
             </button>
           </Link>
-        </div>
 
-        {/* Lista de metas */}
+          <Link href="/metas/micrometas">
+            <button className="flex items-center gap-2 border border-gray-300 dark:border-gray-700 px-4 py-2 rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition">
+              <ListTodo className="w-4 h-4" />
+              Micro-metas
+            </button>
+          </Link>
+
+          <Link href="/metas/historico">
+            <button className="flex items-center gap-2 border border-gray-300 dark:border-gray-700 px-4 py-2 rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition">
+              <History className="w-4 h-4" />
+              Histórico
+            </button>
+          </Link>
+        </motion.div>
+
+        {/* ========================= */}
+        {/* LISTA DE METAS */}
+        {/* ========================= */}
         <div className="space-y-5 pt-4">
           {metas.length === 0 && (
-            <p className="text-gray-500 text-sm">
-              Você ainda não criou nenhuma meta.
-            </p>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="bg-gray-100 dark:bg-gray-900/40 border border-gray-300 dark:border-gray-800 rounded-2xl p-6 text-center"
+            >
+              <p className="text-gray-600 dark:text-gray-400 mb-3">
+                Você ainda não criou nenhuma meta principal.
+              </p>
+
+              <Link href="/metas/nova">
+                <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2 rounded-xl">
+                  Criar minha primeira meta
+                </button>
+              </Link>
+            </motion.div>
           )}
 
           {metas.map((meta) => {
@@ -106,7 +143,7 @@ export default function MetasPage() {
               <Link key={meta.id} href={`/metas/${meta.id}`}>
                 <motion.div
                   whileHover={{ y: -4, scale: 1.01 }}
-                  className="border border-gray-200 dark:border-gray-800 rounded-2xl p-5 bg-gray-50/50 dark:bg-gray-900/60 cursor-pointer transition"
+                  className="border border-gray-200 dark:border-gray-800 rounded-2xl p-5 bg-gray-50/50 dark:bg-gray-900/60 cursor-pointer transition shadow-sm"
                 >
                   <div className="flex justify-between">
                     <div>
@@ -121,7 +158,13 @@ export default function MetasPage() {
                   {/* Barra de progresso */}
                   <div className="w-full h-2 bg-gray-200 dark:bg-gray-800 rounded-full mt-3 overflow-hidden">
                     <motion.div
-                      className="h-full bg-emerald-500"
+                      className={`h-full ${
+                        pct < 35
+                          ? "bg-red-400"
+                          : pct < 70
+                          ? "bg-yellow-400"
+                          : "bg-emerald-500"
+                      }`}
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 0.5 }}
@@ -140,4 +183,3 @@ export default function MetasPage() {
     </motion.div>
   );
 }
-
