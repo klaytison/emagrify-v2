@@ -5,6 +5,7 @@ import "./globals.css";
 import "../lib/fonts";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SupabaseProvider } from "@/providers/SupabaseProvider";
+import { Toaster } from "@/components/ui/use-toast"; // 🟩 Toasts do Shadcn
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,11 +33,18 @@ export default function RootLayout({
       <head>
         <Script src="/lasy-bridge.js" strategy="beforeInteractive" />
       </head>
+
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        {/* Tema global + Supabase */}
         <ThemeProvider>
-          <SupabaseProvider>{children}</SupabaseProvider>
+          <SupabaseProvider>
+            {children}
+
+            {/* 🟩 Toasts globais funcionando no app inteiro */}
+            <Toaster />
+          </SupabaseProvider>
         </ThemeProvider>
       </body>
     </html>
