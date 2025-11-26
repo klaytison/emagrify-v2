@@ -99,12 +99,20 @@ export default function MetasPage() {
             </button>
           </Link>
 
-          <Link href="/metas/micrometas">
-            <button className="flex items-center gap-2 border border-gray-300 dark:border-gray-700 px-4 py-2 rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition">
-              <ListTodo className="w-4 h-4" />
-              Micro-metas
-            </button>
-          </Link>
+          <button
+  disabled={metas.length === 0}
+  onClick={() => metas.length > 0 && router.push(`/metas/${metas[0].id}/micrometas`)}
+  className={`
+    flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition
+    ${metas.length === 0 
+      ? "bg-slate-800 text-slate-500 cursor-not-allowed opacity-50" 
+      : "bg-slate-800 hover:bg-slate-700 text-white"
+    }
+  `}
+>
+  Micro-metas
+</button>
+
 
           <Link href="/metas/historico">
             <button className="flex items-center gap-2 border border-gray-300 dark:border-gray-700 px-4 py-2 rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition">
