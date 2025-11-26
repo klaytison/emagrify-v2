@@ -25,6 +25,7 @@ type MetaPrincipal = {
   dificuldade: string;
   inicio: string | null;
   fim: string | null;
+  status: string;
   criado_em: string;
 };
 
@@ -51,10 +52,8 @@ export default function MetaDetalhes() {
 
   async function carregar() {
     if (!session?.user) return;
-
     setLoading(true);
 
-    // META PRINCIPAL
     const { data: m } = await supabase
       .from("metas_principais")
       .select("*")
@@ -63,7 +62,6 @@ export default function MetaDetalhes() {
 
     setMeta(m as MetaPrincipal);
 
-    // MICRO-METAS
     const { data: micro } = await supabase
       .from("micro_metas")
       .select("*")
@@ -71,7 +69,6 @@ export default function MetaDetalhes() {
       .order("semana", { ascending: true });
 
     setMicroMetas((micro as MicroMeta[]) || []);
-
     setLoading(false);
   }
 
@@ -103,6 +100,17 @@ export default function MetaDetalhes() {
     }
   }
 
+  async function concluirMeta() {
+    if (!meta) return;
+
+    await supabase
+      .from("metas_principais")
+      .update({ status: "concluida" })
+      .eq("id", metaId);
+
+    carregar();
+  }
+
   if (!session?.user) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-400">
@@ -132,6 +140,7 @@ export default function MetaDetalhes() {
       <Header />
 
       <main className="max-w-4xl mx-auto px-4 py-10 space-y-10">
+        {/* VOLTAR */}
         <button
           onClick={() => router.push("/metas")}
           className="inline-flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition"
@@ -140,6 +149,7 @@ export default function MetaDetalhes() {
           Voltar para metas
         </button>
 
+        {/* CABEÇALHO */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -152,7 +162,8 @@ export default function MetaDetalhes() {
 
           <h1 className="text-3xl font-bold flex items-center gap-2">
             {meta.titulo}
-            {progresso === 100 && (
+
+            {meta.status === "concluida" && (
               <Trophy className="w-6 h-6 text-yellow-400" />
             )}
           </h1>
@@ -178,7 +189,7 @@ export default function MetaDetalhes() {
           </div>
         </motion.div>
 
-        {/* Progresso */}
+        {/* PROGRESSO */}
         <section className="space-y-3">
           <h2 className="text-sm font-semibold">Progresso geral</h2>
 
@@ -203,7 +214,24 @@ export default function MetaDetalhes() {
           </div>
         </section>
 
-        {/* Micro-metas */}
+        {/* BOTÃO CONCLUIR META */}
+        {progresso === 100 && meta.status !== "concluida" && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex justify-center"
+          >
+            <button
+              onClick={concluirMeta}
+              className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-black px-6 py-3 rounded-xl font-semibold shadow-lg transition"
+            >
+              <Trophy className="w-5 h-5" />
+              Concluir Meta
+            </button>
+          </motion.div>
+        )}
+
+        {/* MICRO-METAS */}
         <section className="space-y-4">
           <div className="flex justify-between items-center gap-2">
             <h2 className="text-lg font-bold">Micro-metas semanais</h2>
