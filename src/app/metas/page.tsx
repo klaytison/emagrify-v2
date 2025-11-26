@@ -14,6 +14,7 @@ type Meta = {
   descricao: string;
   categoria: string;
   status: string;
+  dificuldade?: string;
   criado_em: string;
 };
 
@@ -29,7 +30,7 @@ export default function MetasPage() {
 
     setLoading(true);
 
-    // 🔥 1) Carrega metas principais
+    // Carrega metas principais
     const { data: metasData } = await supabase
       .from("metas_principais")
       .select("*")
@@ -42,7 +43,7 @@ export default function MetasPage() {
       return;
     }
 
-    // 🔥 2) Para cada meta, carregar micro-metas e calcular progresso REAL
+    // Carregar micro-metas e calcular progresso real
     const metasComProgresso = await Promise.all(
       metasData.map(async (meta) => {
         const { data: micros } = await supabase
@@ -62,6 +63,9 @@ export default function MetasPage() {
         };
       })
     );
+
+    // Ordenar metas por progresso — ranking!
+    metasComProgresso.sort((a, b) => b.progressoReal - a.progressoReal);
 
     setMetas(metasComProgresso);
     setLoading(false);
@@ -87,6 +91,13 @@ export default function MetasPage() {
     );
   }
 
+  // Ranking visual
+  const medalha = (index: number) => {
+    if (index === 0) return "🥇 Ouro";
+    if (index === 1) return "🥈 Prata";
+    return "🥉 Bronze";
+  };
+
   return (
     <motion.div
       className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50"
@@ -96,6 +107,7 @@ export default function MetasPage() {
       <Header />
 
       <main className="max-w-4xl mx-auto px-4 py-10 space-y-10">
+
         {/* TÍTULO */}
         <motion.div
           initial={{ y: -10, opacity: 0 }}
@@ -113,7 +125,7 @@ export default function MetasPage() {
           </p>
         </motion.div>
 
-        {/* BARRA DE ATALHOS */}
+        {/* ATALHOS */}
         <motion.div
           className="flex flex-wrap gap-3 pt-2"
           initial={{ opacity: 0, y: 10 }}
@@ -173,7 +185,7 @@ export default function MetasPage() {
             </motion.div>
           )}
 
-          {metas.map((meta) => {
+          {metas.map((meta, index) => {
             const pct = meta.progressoReal ?? 0;
 
             return (
@@ -182,33 +194,52 @@ export default function MetasPage() {
                   whileHover={{ y: -4, scale: 1.01 }}
                   className="border border-gray-200 dark:border-gray-800 rounded-2xl p-5 bg-gray-50/50 dark:bg-gray-900/60 cursor-pointer transition shadow-sm"
                 >
+
+                  {/* CABEÇALHO */}
                   <div className="flex justify-between">
                     <div>
-                      <h2 className="text-lg font-semibold">{meta.titulo}</h2>
+                      <h2 className="text-lg font-semibold flex items-center gap-2">
+                        {meta.titulo}
+
+                        {/* Selo de Concluída */}
+                        {meta.status === "concluida" && (
+                          <span className="text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-full border border-yellow-400/30 text-xs font-bold">
+                            ✔ Concluída
+                          </span>
+                        )}
+                      </h2>
+
                       <p className="text-sm text-gray-500">{meta.categoria}</p>
-                      <p className="text-xs mt-2 text-gray-400 capitalize">
-                        Status: {meta.status}
-                      </p>
+
+                      {/* Medalha / Ranking */}
+                      <span className="text-xs bg-gray-800/40 text-gray-200 px-2 py-1 rounded-full border border-gray-700/40 mt-1 inline-block">
+                        {medalha(index)}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Barra de progresso real */}
+                  {/* Barra de progresso */}
                   <div className="w-full h-2 bg-gray-200 dark:bg-gray-800 rounded-full mt-3 overflow-hidden">
                     <motion.div
-                      className={`h-full ${
-                        pct < 35
-                          ? "bg-red-400"
-                          : pct < 70
-                          ? "bg-yellow-400"
-                          : "bg-emerald-500"
-                      }`}
+                      className={`
+                        h-full
+                        ${
+                          pct < 35
+                            ? "bg-red-400"
+                            : pct < 70
+                            ? "bg-yellow-400"
+                            : "bg-emerald-500"
+                        }
+                      `}
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
-                      transition={{ duration: 0.5 }}
+                      transition={{ duration: 0.8, ease: "easeOut" }}
                     />
                   </div>
 
-                  <p className="text-xs text-gray-500 mt-1">{pct}% concluído</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {pct}% concluído
+                  </p>
                 </motion.div>
               </Link>
             );
