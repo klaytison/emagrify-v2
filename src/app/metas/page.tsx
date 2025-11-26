@@ -6,6 +6,7 @@ import { useSupabase } from "@/providers/SupabaseProvider";
 import Header from "@/components/Header";
 import { Loader2, Target, PlusCircle, ListTodo, History } from "lucide-react";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 type Meta = {
   id: string;
@@ -18,6 +19,7 @@ type Meta = {
 
 export default function MetasPage() {
   const { supabase, session } = useSupabase();
+  const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [metas, setMetas] = useState<Meta[]>([]);
@@ -92,6 +94,7 @@ export default function MetasPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
         >
+          {/* Criar meta */}
           <Link href="/metas/nova">
             <button className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm shadow">
               <PlusCircle className="w-4 h-4" />
@@ -99,21 +102,27 @@ export default function MetasPage() {
             </button>
           </Link>
 
+          {/* Micro-metas */}
           <button
-  disabled={metas.length === 0}
-  onClick={() => metas.length > 0 && router.push(`/metas/${metas[0].id}/micrometas`)}
-  className={`
-    flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition
-    ${metas.length === 0 
-      ? "bg-slate-800 text-slate-500 cursor-not-allowed opacity-50" 
-      : "bg-slate-800 hover:bg-slate-700 text-white"
-    }
-  `}
->
-  Micro-metas
-</button>
+            disabled={metas.length === 0}
+            onClick={() =>
+              metas.length > 0 &&
+              router.push(`/metas/${metas[0].id}/micrometas`)
+            }
+            className={`
+              flex items-center gap-2 px-4 py-2 rounded-xl text-sm shadow transition
+              ${
+                metas.length === 0
+                  ? "bg-gray-800 text-gray-500 cursor-not-allowed opacity-50"
+                  : "bg-gray-800 hover:bg-gray-700 text-white"
+              }
+            `}
+          >
+            <ListTodo className="w-4 h-4" />
+            Micro-metas
+          </button>
 
-
+          {/* Histórico */}
           <Link href="/metas/historico">
             <button className="flex items-center gap-2 border border-gray-300 dark:border-gray-700 px-4 py-2 rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition">
               <History className="w-4 h-4" />
