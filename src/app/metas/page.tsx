@@ -13,8 +13,8 @@ type Meta = {
   titulo: string;
   descricao: string;
   categoria: string;
-  progresso: number;
   status: string;
+  criado_em: string;
 };
 
 export default function MetasPage() {
@@ -22,18 +22,48 @@ export default function MetasPage() {
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
-  const [metas, setMetas] = useState<Meta[]>([]);
+  const [metas, setMetas] = useState<any[]>([]);
 
   async function carregar() {
     if (!session?.user) return;
 
-    const { data } = await supabase
+    setLoading(true);
+
+    // 🔥 1) Carrega metas principais
+    const { data: metasData } = await supabase
       .from("metas_principais")
       .select("*")
       .eq("user_id", session.user.id)
       .order("criado_em", { ascending: false });
 
-    setMetas((data as Meta[]) || []);
+    if (!metasData) {
+      setMetas([]);
+      setLoading(false);
+      return;
+    }
+
+    // 🔥 2) Para cada meta, carregar micro-metas e calcular progresso REAL
+    const metasComProgresso = await Promise.all(
+      metasData.map(async (meta) => {
+        const { data: micros } = await supabase
+          .from("micro_metas")
+          .select("concluido")
+          .eq("meta_id", meta.id);
+
+        const total = micros?.length ?? 0;
+        const concluidas = micros?.filter((m) => m.concluido).length ?? 0;
+
+        const progressoReal =
+          total > 0 ? Math.round((concluidas / total) * 100) : 0;
+
+        return {
+          ...meta,
+          progressoReal,
+        };
+      })
+    );
+
+    setMetas(metasComProgresso);
     setLoading(false);
   }
 
@@ -66,10 +96,7 @@ export default function MetasPage() {
       <Header />
 
       <main className="max-w-4xl mx-auto px-4 py-10 space-y-10">
-
-        {/* ========================= */}
         {/* TÍTULO */}
-        {/* ========================= */}
         <motion.div
           initial={{ y: -10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -86,15 +113,12 @@ export default function MetasPage() {
           </p>
         </motion.div>
 
-        {/* ========================= */}
         {/* BARRA DE ATALHOS */}
-        {/* ========================= */}
         <motion.div
           className="flex flex-wrap gap-3 pt-2"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          {/* Criar meta */}
           <Link href="/metas/nova">
             <button className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm shadow">
               <PlusCircle className="w-4 h-4" />
@@ -102,7 +126,6 @@ export default function MetasPage() {
             </button>
           </Link>
 
-          {/* Micro-metas */}
           <button
             disabled={metas.length === 0}
             onClick={() =>
@@ -122,7 +145,6 @@ export default function MetasPage() {
             Micro-metas
           </button>
 
-          {/* Histórico */}
           <Link href="/metas/historico">
             <button className="flex items-center gap-2 border border-gray-300 dark:border-gray-700 px-4 py-2 rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-gray-900 transition">
               <History className="w-4 h-4" />
@@ -131,9 +153,7 @@ export default function MetasPage() {
           </Link>
         </motion.div>
 
-        {/* ========================= */}
         {/* LISTA DE METAS */}
-        {/* ========================= */}
         <div className="space-y-5 pt-4">
           {metas.length === 0 && (
             <motion.div
@@ -154,7 +174,7 @@ export default function MetasPage() {
           )}
 
           {metas.map((meta) => {
-            const pct = meta.progresso ?? 0;
+            const pct = meta.progressoReal ?? 0;
 
             return (
               <Link key={meta.id} href={`/metas/${meta.id}`}>
@@ -172,7 +192,7 @@ export default function MetasPage() {
                     </div>
                   </div>
 
-                  {/* Barra de progresso */}
+                  {/* Barra de progresso real */}
                   <div className="w-full h-2 bg-gray-200 dark:bg-gray-800 rounded-full mt-3 overflow-hidden">
                     <motion.div
                       className={`h-full ${
@@ -188,9 +208,7 @@ export default function MetasPage() {
                     />
                   </div>
 
-                  <p className="text-xs text-gray-500 mt-1">
-                    {pct}% concluído
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">{pct}% concluído</p>
                 </motion.div>
               </Link>
             );
