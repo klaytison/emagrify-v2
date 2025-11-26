@@ -6,6 +6,12 @@ import "../lib/fonts";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SupabaseProvider } from "@/providers/SupabaseProvider";
 
+// 🟢 IMPORTANTE: importar o ToastProvider do seu arquivo toast.ts
+import { ToastProvider } from "@/components/ui/toast";
+
+// 🟢 E o Toaster do use-toast.tsx
+import { Toaster } from "@/components/ui/use-toast";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -24,19 +30,28 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="pt-BR">
       <head>
         <Script src="/lasy-bridge.js" strategy="beforeInteractive" />
       </head>
+
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider>
-          <SupabaseProvider>{children}</SupabaseProvider>
+          <SupabaseProvider>
+            {/* 🟢 RADIX TOAST PROVIDER ENVOLVENDO TODO O APP */}
+            <ToastProvider>
+              {children}
+
+              {/* 🟢 Toaster funcionando dentro do provider */}
+              <Toaster />
+            </ToastProvider>
+          </SupabaseProvider>
         </ThemeProvider>
       </body>
     </html>
