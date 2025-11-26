@@ -77,28 +77,51 @@ export default function MetaDetalhes() {
   }, [session]);
 
   async function toggleConcluido(m: MicroMeta) {
-    if (!session?.user) return;
+  if (!session?.user) return;
 
-    try {
-      setUpdatingId(m.id);
+  try {
+    setUpdatingId(m.id);
 
-      const { error } = await supabase
-        .from("micro_metas")
-        .update({ concluido: !m.concluido })
-        .eq("id", m.id)
-        .eq("meta_id", metaId);
+    // 1) Atualiza a micro-meta
+    const { error } = await supabase
+      .from("micro_metas")
+      .update({ concluido: !m.concluido })
+      .eq("id", m.id)
+      .eq("meta_id", metaId);
 
-      if (!error) {
-        setMicroMetas((prev) =>
-          prev.map((x) =>
-            x.id === m.id ? { ...x, concluido: !m.concluido } : x
-          )
-        );
-      }
-    } finally {
-      setUpdatingId(null);
+    if (error) {
+      console.error("Erro ao atualizar micro-meta:", error);
+      return;
     }
+
+    // 2) Atualiza visualmente no frontend
+    const novas = microMetas.map((x) =>
+      x.id === m.id ? { ...x, concluido: !m.concluido } : x
+    );
+
+    setMicroMetas(novas);
+
+    // 3) Verifica se TODAS foram concluídas
+    const total = novas.length;
+    const concluidas = novas.filter((x) => x.concluido).length;
+
+    // 4) Se TODAS foram concluídas → marca a meta principal como concluída
+    if (total > 0 && total === concluidas) {
+      await supabase
+        .from("metas_principais")
+        .update({ status: "concluida" })
+        .eq("id", metaId);
+
+      // Atualiza a meta no estado
+      setMeta((prev) =>
+        prev ? { ...prev, status: "concluida" } : prev
+      );
+    }
+
+  } finally {
+    setUpdatingId(null);
   }
+}
 
   async function concluirMeta() {
     if (!meta) return;
