@@ -5,8 +5,11 @@ import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Ruler, Weight, Percent } from "lucide-react";
+import { useSupabase } from "@/providers/SupabaseProvider";
 
 export default function EvolucaoVisualPage() {
+  const { supabase, session } = useSupabase();
+
   const [peso, setPeso] = useState("");
   const [cintura, setCintura] = useState("");
   const [gordura, setGordura] = useState("");
@@ -19,7 +22,7 @@ export default function EvolucaoVisualPage() {
 
     setLoading(true);
 
-    // ⚠ MOCK TEMPORÁRIO — depois será substituído pela API da OpenAI
+    // ---- LÓGICA TEMPORÁRIA (MOCK) ---- //
     const gorduraNum = Number(gordura);
     let level = "media";
 
@@ -59,8 +62,20 @@ export default function EvolucaoVisualPage() {
       `
     };
 
-    // seta a silhueta
-    setSilhueta(silhuetaSVG[level]);
+    const svg = silhuetaSVG[level];
+    setSilhueta(svg);
+
+    // ---- SALVAR NO SUPABASE ---- //
+    if (session?.user) {
+      await supabase.from("evolucao_silhuetas").insert({
+        user_id: session.user.id,
+        peso: Number(peso),
+        cintura: Number(cintura),
+        gordura: Number(gordura),
+        silhueta_svg: svg
+      });
+    }
+
     setLoading(false);
   }
 
@@ -123,7 +138,7 @@ export default function EvolucaoVisualPage() {
 
         </div>
 
-        {/* BOTÃO */}
+        {/* BUTTON */}
         <Button
           onClick={gerarSilhueta}
           className="w-full py-3 text-lg bg-emerald-500 hover:bg-emerald-600"
@@ -131,10 +146,10 @@ export default function EvolucaoVisualPage() {
           {loading ? "Gerando..." : "Gerar Silhueta"}
         </Button>
 
-        {/* SILHUETA GERADA */}
+        {/* SILHUETA */}
         {silhueta && (
           <motion.div
-            key={silhueta} // anima sempre que a silhueta muda
+            key={silhueta}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
