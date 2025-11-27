@@ -12,7 +12,7 @@ export default function CompararSilhuetaPage() {
   const [loading, setLoading] = useState(true);
   const [antes, setAntes] = useState<any | null>(null);
   const [depois, setDepois] = useState<any | null>(null);
-  const [slider, setSlider] = useState(50); // porcentagem do corte
+  const [slider, setSlider] = useState(50);
 
   async function carregar() {
     if (!session?.user) return;
@@ -30,9 +30,8 @@ export default function CompararSilhuetaPage() {
       return;
     }
 
-    setAntes(data[0]); // mais antiga
-    setDepois(data[data.length - 1]); // mais recente
-
+    setAntes(data[0]); 
+    setDepois(data[data.length - 1]); 
     setLoading(false);
   }
 
@@ -54,14 +53,57 @@ export default function CompararSilhuetaPage() {
           Compare automaticamente sua primeira silhueta com a mais recente.
         </p>
 
-        {/* LOADING */}
         {loading && (
           <div className="flex justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
           </div>
         )}
 
-        {/* SE NÃO TIVER DADOS */}
         {!loading && (!antes || !depois) && (
           <div className="text-center text-gray-400 py-20">
-            Você precisa ter pelo meno
+            Você precisa ter pelo menos <strong>2 silhuetas salvas</strong> para comparar.
+          </div>
+        )}
+
+        {!loading && antes && depois && (
+          <>
+            <div className="mb-6">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={slider}
+                onChange={(e) => setSlider(Number(e.target.value))}
+                className="w-full accent-emerald-400"
+              />
+            </div>
+
+            <div className="relative w-full flex justify-center">
+              <div className="relative w-[250px] h-[460px] border border-gray-800 rounded-xl overflow-hidden bg-gray-900/40">
+
+                <div
+                  className="absolute inset-0 flex justify-center items-start"
+                  dangerouslySetInnerHTML={{ __html: depois.silhueta_svg }}
+                />
+
+                <div
+                  className="absolute inset-0 flex justify-center items-start overflow-hidden"
+                  style={{ width: `${slider}%` }}
+                >
+                  <div
+                    dangerouslySetInnerHTML={{ __html: antes.silhueta_svg }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between text-sm text-gray-400 mt-4">
+              <span>Primeira silhueta</span>
+              <span>Mais recente</span>
+            </div>
+          </>
+        )}
+      </main>
+    </div>
+  );
+}
