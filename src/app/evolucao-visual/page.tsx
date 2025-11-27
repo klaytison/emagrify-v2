@@ -4,11 +4,13 @@ import { useState } from "react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Ruler, Weight, Percent } from "lucide-react";
+import { Ruler, Weight, Percent, History } from "lucide-react";
 import { useSupabase } from "@/providers/SupabaseProvider";
+import { useRouter } from "next/navigation";
 
 export default function EvolucaoVisualPage() {
   const { supabase, session } = useSupabase();
+  const router = useRouter();
 
   const [peso, setPeso] = useState("");
   const [cintura, setCintura] = useState("");
@@ -22,57 +24,52 @@ export default function EvolucaoVisualPage() {
 
     setLoading(true);
 
-    // ---- LÓGICA TEMPORÁRIA (MOCK) ---- //
+    // ----- NÍVEL 2 — SVG ORGÂNICO -----
+    const cinturaNum = Number(cintura);
     const gorduraNum = Number(gordura);
-    let level = "media";
 
-    if (gorduraNum <= 18) level = "baixa";
-    else if (gorduraNum >= 30) level = "alta";
+    const cinturaScale = Math.max(0.6, Math.min(1.4, cinturaNum / 70));
+    const quadrilScale = Math.max(0.7, Math.min(1.6, gorduraNum / 22));
+    const troncoAltura = 110;
+    const troncoLargura = 45 * cinturaScale;
 
-    const silhuetaSVG = {
-      baixa: `
-        <svg width="120" height="240" viewBox="0 0 120 240" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="60" cy="40" r="25" stroke="white" stroke-width="4"/>
-          <rect x="45" y="70" width="30" height="70" rx="15" stroke="white" stroke-width="4"/>
-          <line x1="30" y1="90" x2="45" y2="110" stroke="white" stroke-width="4"/>
-          <line x1="90" y1="90" x2="75" y2="110" stroke="white" stroke-width="4"/>
-          <line x1="55" y1="140" x2="45" y2="200" stroke="white" stroke-width="4"/>
-          <line x1="65" y1="140" x2="75" y2="200" stroke="white" stroke-width="4"/>
-        </svg>
-      `,
-      media: `
-        <svg width="120" height="240" viewBox="0 0 120 240" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="60" cy="40" r="25" stroke="white" stroke-width="4"/>
-          <rect x="35" y="70" width="50" height="80" rx="25" stroke="white" stroke-width="4"/>
-          <line x1="20" y1="95" x2="35" y2="120" stroke="white" stroke-width="4"/>
-          <line x1="100" y1="95" x2="85" y2="120" stroke="white" stroke-width="4"/>
-          <line x1="50" y1="150" x2="40" y2="210" stroke="white" stroke-width="4"/>
-          <line x1="70" y1="150" x2="80" y2="210" stroke="white" stroke-width="4"/>
-        </svg>
-      `,
-      alta: `
-        <svg width="120" height="240" viewBox="0 0 120 240" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="60" cy="40" r="28" stroke="white" stroke-width="4"/>
-          <rect x="25" y="70" width="70" height="95" rx="35" stroke="white" stroke-width="4"/>
-          <line x1="10" y1="100" x2="25" y2="130" stroke="white" stroke-width="4"/>
-          <line x1="110" y1="100" x2="95" y2="130" stroke="white" stroke-width="4"/>
-          <line x1="55" y1="165" x2="45" y2="225" stroke="white" stroke-width="4"/>
-          <line x1="65" y1="165" x2="75" y2="225" stroke="white" stroke-width="4"/>
-        </svg>
-      `
-    };
+    const svg = `
+      <svg width="180" height="320" viewBox="0 0 180 320" fill="none" xmlns="http://www.w3.org/2000/svg">
 
-    const svg = silhuetaSVG[level];
+        <!-- Cabeça -->
+        <circle cx="90" cy="45" r="28" stroke="white" stroke-width="4"/>
+
+        <!-- Tronco orgânico -->
+        <path d="
+          M ${90 - troncoLargura} 90
+          Q 90 110, ${90 - troncoLargura * 0.8} 120
+          Q 90 ${130 + troncoAltura * 0.4}, ${90 - troncoLargura * quadrilScale} ${90 + troncoAltura}
+          L ${90 + troncoLargura * quadrilScale} ${90 + troncoAltura}
+          Q 90 ${130 + troncoAltura * 0.4}, ${90 + troncoLargura * 0.8} 120
+          Q 90 110, ${90 + troncoLargura} 90
+          Z
+        " stroke="white" stroke-width="4" fill="none"/>
+
+        <!-- Braços -->
+        <path d="M ${90 - troncoLargura} 110 L 40 150" stroke="white" stroke-width="4" stroke-linecap="round"/>
+        <path d="M ${90 + troncoLargura} 110 L 140 150" stroke="white" stroke-width="4" stroke-linecap="round"/>
+
+        <!-- Pernas -->
+        <path d="M 80  ${90 + troncoAltura} L 70 300" stroke="white" stroke-width="4" stroke-linecap="round"/>
+        <path d="M 100 ${90 + troncoAltura} L 110 300" stroke="white" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+    `;
+
     setSilhueta(svg);
 
-    // ---- SALVAR NO SUPABASE ---- //
+    // ----- SALVAR NO SUPABASE -----
     if (session?.user) {
       await supabase.from("evolucao_silhuetas").insert({
         user_id: session.user.id,
         peso: Number(peso),
         cintura: Number(cintura),
         gordura: Number(gordura),
-        silhueta_svg: svg
+        silhueta_svg: svg,
       });
     }
 
@@ -122,7 +119,7 @@ export default function EvolucaoVisualPage() {
             />
           </div>
 
-          {/* Gordura */}
+          {/* Gordura (%) */}
           <div className="bg-gray-100 dark:bg-gray-900/60 p-5 rounded-xl border border-gray-200 dark:border-gray-800">
             <label className="flex items-center gap-2 font-semibold mb-2">
               <Percent className="w-4 h-4 text-pink-400" />
@@ -138,7 +135,7 @@ export default function EvolucaoVisualPage() {
 
         </div>
 
-        {/* BUTTON */}
+        {/* BUTTON — GERAR */}
         <Button
           onClick={gerarSilhueta}
           className="w-full py-3 text-lg bg-emerald-500 hover:bg-emerald-600"
@@ -146,7 +143,17 @@ export default function EvolucaoVisualPage() {
           {loading ? "Gerando..." : "Gerar Silhueta"}
         </Button>
 
-        {/* SILHUETA */}
+        {/* BUTTON — HISTÓRICO */}
+        <Button
+          onClick={() => router.push("/evolucao-visual/historico")}
+          variant="outline"
+          className="w-full py-3 text-lg mt-3 border-emerald-500 text-emerald-500 hover:bg-emerald-500 hover:text-white"
+        >
+          <History className="w-4 h-4 mr-2" />
+          Ver Histórico de Silhuetas
+        </Button>
+
+        {/* SILHUETA GERADA */}
         {silhueta && (
           <motion.div
             key={silhueta}
