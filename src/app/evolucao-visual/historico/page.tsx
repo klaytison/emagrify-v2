@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import { useSupabase } from "@/providers/SupabaseProvider";
 import { motion } from "framer-motion";
-import { Clock, Loader2, ArrowRightLeft } from "lucide-react";
+import { Clock, Loader2, ArrowRightLeft, BarChart4 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function HistoricoSilhuetasPage() {
@@ -41,9 +41,22 @@ export default function HistoricoSilhuetasPage() {
           <h1 className="text-3xl font-bold">Histórico de Silhuetas</h1>
         </div>
 
-        <p className="text-gray-400 mb-10">
+        <p className="text-gray-400 mb-6">
           Todas as silhuetas geradas pela IA ficam guardadas aqui.
         </p>
+
+        {/* 🔥 BOTÃO: VER GRÁFICO DE EVOLUÇÃO */}
+        <button
+          onClick={() => router.push("/evolucao-visual/grafico")}
+          className="
+            flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600
+            text-black font-semibold px-4 py-2 rounded-xl shadow mb-10
+            transition w-full md:w-auto
+          "
+        >
+          <BarChart4 className="w-4 h-4" />
+          Ver Gráfico de Evolução
+        </button>
 
         {loading && (
           <div className="flex justify-center py-20">
@@ -98,9 +111,7 @@ export default function HistoricoSilhuetasPage() {
                   {item.cintura}cm
                 </p>
                 <p>
-                  <span className="font-semibold text-pink-400">
-                    Gordura:
-                  </span>{" "}
+                  <span className="font-semibold text-pink-400">Gordura:</span>{" "}
                   {item.gordura}%
                 </p>
               </div>
