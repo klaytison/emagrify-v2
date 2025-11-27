@@ -4,13 +4,15 @@ import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import { useSupabase } from "@/providers/SupabaseProvider";
 import { motion } from "framer-motion";
-import { ArrowsLeftRight } from "lucide-react";
+import { ArrowLeftRight, Loader2 } from "lucide-react";
 
-export default function CompararSilhuetas() {
+export default function CompararSilhuetaPage() {
   const { supabase, session } = useSupabase();
-  const [lista, setLista] = useState<any[]>([]);
-  const [before, setBefore] = useState<string | null>(null);
-  const [after, setAfter] = useState<string | null>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [antes, setAntes] = useState<any | null>(null);
+  const [depois, setDepois] = useState<any | null>(null);
+  const [slider, setSlider] = useState(50); // porcentagem do corte
 
   async function carregar() {
     if (!session?.user) return;
@@ -19,9 +21,19 @@ export default function CompararSilhuetas() {
       .from("evolucao_silhuetas")
       .select("*")
       .eq("user_id", session.user.id)
-      .order("criado_em", { ascending: true });
+      .order("created_at", { ascending: true });
 
-    setLista(data || []);
+    if (!data || data.length < 2) {
+      setAntes(null);
+      setDepois(null);
+      setLoading(false);
+      return;
+    }
+
+    setAntes(data[0]); // mais antiga
+    setDepois(data[data.length - 1]); // mais recente
+
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -29,74 +41,27 @@ export default function CompararSilhuetas() {
   }, [session]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-50">
+    <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-100 transition">
       <Header />
 
-      <main className="max-w-3xl mx-auto px-6 py-12">
-        <h1 className="text-3xl font-bold mb-6">Comparar Silhuetas</h1>
-
-        <p className="text-gray-400 mb-8">
-          Selecione duas silhuetas para comparar sua evolução.
-        </p>
-
-        {/* Seleção */}
-        <div className="grid md:grid-cols-2 gap-6 mb-10">
-          {/* ANTES */}
-          <div>
-            <label className="block mb-2 font-semibold">Antes</label>
-            <select
-              className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg"
-              onChange={(e) => setBefore(e.target.value)}
-            >
-              <option value="">Selecione</option>
-              {lista.map((item) => (
-                <option key={item.id} value={item.silhueta_svg}>
-                  {new Date(item.criado_em).toLocaleDateString("pt-BR")}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* DEPOIS */}
-          <div>
-            <label className="block mb-2 font-semibold">Depois</label>
-            <select
-              className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg"
-              onChange={(e) => setAfter(e.target.value)}
-            >
-              <option value="">Selecione</option>
-              {lista.map((item) => (
-                <option key={item.id} value={item.silhueta_svg}>
-                  {new Date(item.criado_em).toLocaleDateString("pt-BR")}
-                </option>
-              ))}
-            </select>
-          </div>
+      <main className="max-w-4xl mx-auto px-6 py-10">
+        <div className="flex items-center gap-3 mb-6">
+          <ArrowLeftRight className="w-6 h-6 text-emerald-400" />
+          <h1 className="text-3xl font-bold">Comparar Silhuetas</h1>
         </div>
 
-        {/* RESULTADO */}
-        {before && after && (
-          <div className="mt-10 flex flex-col items-center gap-6">
-            <ArrowsLeftRight className="w-10 h-10 text-gray-500" />
+        <p className="text-gray-400 mb-10">
+          Compare automaticamente sua primeira silhueta com a mais recente.
+        </p>
 
-            <div className="grid grid-cols-2 gap-10">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="bg-gray-900/40 p-5 rounded-xl border border-gray-800"
-                dangerouslySetInnerHTML={{ __html: before }}
-              />
-
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="bg-gray-900/40 p-5 rounded-xl border border-gray-800"
-                dangerouslySetInnerHTML={{ __html: after }}
-              />
-            </div>
+        {/* LOADING */}
+        {loading && (
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
           </div>
         )}
-      </main>
-    </div>
-  );
-}
+
+        {/* SE NÃO TIVER DADOS */}
+        {!loading && (!antes || !depois) && (
+          <div className="text-center text-gray-400 py-20">
+            Você precisa ter pelo meno
