@@ -18,8 +18,8 @@ export default function RituaisPage() {
 
         <div className="grid md:grid-cols-2 gap-6">
 
-          {/* RITUAL DA MANHÃ */}
-          <Link href="/rituais/manha">
+          {/* RITUAL MATINAL */}
+          <Link href="/ritual-matinal">
             <motion.div
               whileHover={{ scale: 1.03, y: -3 }}
               className="bg-gray-900/40 p-6 rounded-2xl border border-gray-800 cursor-pointer"
@@ -32,8 +32,8 @@ export default function RituaisPage() {
             </motion.div>
           </Link>
 
-          {/* RITUAL DA NOITE */}
-          <Link href="/rituais/noite">
+          {/* RITUAL NOTURNO */}
+          <Link href="/ritual-noturno">
             <motion.div
               whileHover={{ scale: 1.03, y: -3 }}
               className="bg-gray-900/40 p-6 rounded-2xl border border-gray-800 cursor-pointer"
