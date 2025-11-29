@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Header from "@/components/Header";
-import Campo from "@/components/Campo";
 import { motion } from "framer-motion";
 import { useSupabase } from "@/providers/SupabaseProvider";
 import { Loader2, Dumbbell, ChevronRight, ChevronLeft } from "lucide-react";
@@ -14,13 +13,15 @@ export default function TreinosPage() {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
 
-  // FORM
   const [form, setForm] = useState({
     objetivo: "",
     nivel: "",
+    local: "",
+    tempo: "",
     idade: "",
     altura: "",
     peso: "",
+    tipoCorpo: "",
     energia: "",
     dores: "",
     preferencias: "",
@@ -36,9 +37,11 @@ export default function TreinosPage() {
     setErro("");
     setLoading(true);
 
-    const { data, error } = await supabase.functions.invoke("treinos", {
-      body: form,
-    });
+    const { data, error } = await supabase
+      .from("treinos_gerados")
+      .insert(form)
+      .select("id")
+      .single();
 
     setLoading(false);
 
@@ -50,8 +53,21 @@ export default function TreinosPage() {
     window.location.href = `/treinos/${data.id}`;
   }
 
-  // CARD
-  const Card = ({ children }: { children: React.ReactNode }) => (
+  const Campo = ({ label, value, onChange, placeholder }: any) => (
+    <div className="flex flex-col gap-1">
+      <label className="text-sm text-gray-300">{label}</label>
+      <input
+        type="text"
+        autoComplete="off"
+        className="bg-gray-900/60 border border-gray-700 p-3 rounded-xl outline-none focus:border-emerald-400 transition"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+
+  const Card = ({ children }: any) => (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
@@ -71,7 +87,6 @@ export default function TreinosPage() {
           <h1 className="text-3xl font-bold">Treino Adaptado com IA</h1>
         </div>
 
-        {/* PASSO 1 */}
         {step === 1 && (
           <Card>
             <h2 className="text-xl font-semibold mb-2">Sobre seus Objetivos</h2>
@@ -80,17 +95,18 @@ export default function TreinosPage() {
               label="Objetivo"
               value={form.objetivo}
               placeholder="Ex: perder peso, hipertrofia..."
-              onChange={(v) => update("objetivo", v)}
+              onChange={(v: any) => update("objetivo", v)}
             />
 
             <Campo
               label="Nível atual"
               value={form.nivel}
               placeholder="Iniciante, intermediário, avançado"
-              onChange={(v) => update("nivel", v)}
+              onChange={(v: any) => update("nivel", v)}
             />
 
             <button
+              type="button"
               onClick={() => setStep(2)}
               className="bg-emerald-500 hover:bg-emerald-600 w-full py-3 rounded-xl mt-4 flex items-center justify-center gap-2"
             >
@@ -99,7 +115,6 @@ export default function TreinosPage() {
           </Card>
         )}
 
-        {/* PASSO 2 */}
         {step === 2 && (
           <Card>
             <h2 className="text-xl font-semibold mb-2">Sobre Você</h2>
@@ -108,27 +123,26 @@ export default function TreinosPage() {
               label="Idade"
               value={form.idade}
               placeholder="Sua idade"
-              onChange={(v) => update("idade", v)}
+              onChange={(v: any) => update("idade", v)}
             />
 
             <Campo
               label="Altura (cm)"
               value={form.altura}
               placeholder="Ex: 175"
-              onChange={(v) => update("altura", v)}
-              type="number"
+              onChange={(v: any) => update("altura", v)}
             />
 
             <Campo
               label="Peso (kg)"
               value={form.peso}
-              placeholder="Ex: 70"
-              onChange={(v) => update("peso", v)}
-              type="number"
+              placeholder="Ex: 80"
+              onChange={(v: any) => update("peso", v)}
             />
 
             <div className="flex justify-between mt-4">
               <button
+                type="button"
                 onClick={() => setStep(1)}
                 className="bg-gray-800 hover:bg-gray-700 py-3 px-4 rounded-xl flex gap-2 items-center"
               >
@@ -136,6 +150,7 @@ export default function TreinosPage() {
               </button>
 
               <button
+                type="button"
                 onClick={() => setStep(3)}
                 className="bg-emerald-500 hover:bg-emerald-600 py-3 px-4 rounded-xl flex gap-2 items-center"
               >
@@ -145,7 +160,6 @@ export default function TreinosPage() {
           </Card>
         )}
 
-        {/* PASSO 3 */}
         {step === 3 && (
           <Card>
             <h2 className="text-xl font-semibold mb-2">Preferências e Limitações</h2>
@@ -154,41 +168,42 @@ export default function TreinosPage() {
               label="Energia / disposição"
               value={form.energia}
               placeholder="Alta, média, baixa..."
-              onChange={(v) => update("energia", v)}
+              onChange={(v: any) => update("energia", v)}
             />
 
             <Campo
               label="Dores / limitações"
               value={form.dores}
               placeholder="Ex: joelho, lombar, nenhum..."
-              onChange={(v) => update("dores", v)}
+              onChange={(v: any) => update("dores", v)}
             />
 
             <Campo
               label="Preferências"
               value={form.preferencias}
               placeholder="Ex: pesos livres, funcional..."
-              onChange={(v) => update("preferencias", v)}
+              onChange={(v: any) => update("preferencias", v)}
             />
 
             <Campo
               label="Restrições"
               value={form.restricoes}
               placeholder="Ex: sem impacto, sem cardio..."
-              onChange={(v) => update("restricoes", v)}
+              onChange={(v: any) => update("restricoes", v)}
             />
 
             <Campo
               label="Regiões de foco"
               value={form.regioesFoco}
               placeholder="Ex: glúteos, abdômen, costas..."
-              onChange={(v) => update("regioesFoco", v)}
+              onChange={(v: any) => update("regioesFoco", v)}
             />
 
             {erro && <p className="text-red-400 text-sm mt-2">{erro}</p>}
 
             <div className="flex justify-between mt-4">
               <button
+                type="button"
                 onClick={() => setStep(2)}
                 className="bg-gray-800 hover:bg-gray-700 py-3 px-4 rounded-xl flex gap-2 items-center"
               >
@@ -196,17 +211,12 @@ export default function TreinosPage() {
               </button>
 
               <button
+                type="button"
                 onClick={gerarTreino}
                 disabled={loading}
                 className="bg-emerald-500 hover:bg-emerald-600 py-3 px-4 rounded-xl flex gap-2 items-center disabled:opacity-50"
               >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    Gerar Treino <ChevronRight />
-                  </>
-                )}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Gerar Treino <ChevronRight /></>}
               </button>
             </div>
           </Card>
