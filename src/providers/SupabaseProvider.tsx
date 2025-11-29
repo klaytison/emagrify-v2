@@ -4,6 +4,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import type { Session, User, SupabaseClient } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useState } from "react";
 
+// ---------- CONTEXTO ----------
 type SupabaseContextType = {
   supabase: SupabaseClient;
   session: Session | null;
@@ -17,7 +18,9 @@ const SupabaseContext = createContext<SupabaseContextType | undefined>(
   undefined
 );
 
+// ---------- PROVIDER ----------
 export function SupabaseProvider({ children }: { children: React.ReactNode }) {
+  // CLIENT DO SUPABASE
   const [supabase] = useState(() =>
     createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,35 +32,31 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Carrega sessão inicial apenas 1x
+  // ---------- CARREGAR SESSÃO UMA ÚNICA VEZ ----------
   useEffect(() => {
-    let mounted = true;
+    let isMounted = true;
 
-    const loadInitial = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!mounted) return;
+    const loadSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!isMounted) return;
 
-      setSession((prev) => {
-        return prev?.access_token === data.session?.access_token
-          ? prev
-          : data.session ?? null;
-      });
-
-      setUser(data.session?.user ?? null);
-      setLoading(false);
+        setSession(data.session ?? null);
+        setUser(data.session?.user ?? null);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
     };
 
-    loadInitial();
+    loadSession();
 
-    // Listener otimizado
+    // ---------- LISTENER SEGURO (SEM RE-RENDER AO DIGITAR!) ----------
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      // só atualiza se o token REALMENTE mudou
       setSession((prev) => {
-        // evita re-render desnecessário
-        if (prev?.access_token === newSession?.access_token) {
-          return prev;
-        }
+        if (prev?.access_token === newSession?.access_token) return prev;
         return newSession ?? null;
       });
 
@@ -65,11 +64,12 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
-      mounted = false;
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, [supabase]);
 
+  // ---------- FUNÇÕES ----------
   const signOut = async () => {
     await supabase.auth.signOut();
     setSession(null);
@@ -82,6 +82,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     setUser(data.session?.user ?? null);
   };
 
+  // ---------- VALOR FINAL ----------
   return (
     <SupabaseContext.Provider
       value={{
@@ -98,10 +99,13 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ---------- HOOK ----------
 export function useSupabase() {
-  const ctx = useContext(SupabaseContext);
-  if (!ctx) {
-    throw new Error("useSupabase deve ser usado dentro de um SupabaseProvider");
+  const context = useContext(SupabaseContext);
+  if (!context) {
+    throw new Error(
+      "useSupabase deve ser usado dentro de um SupabaseProvider"
+    );
   }
-  return ctx;
+  return context;
 }
