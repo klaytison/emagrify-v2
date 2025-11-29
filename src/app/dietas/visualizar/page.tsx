@@ -41,7 +41,7 @@ export default function VisualizarDietaPage() {
       <Header />
 
       <main className="max-w-4xl mx-auto px-6 py-10">
-        {/* Voltar */}
+        {/* BOTÃO VOLTAR */}
         <button
           onClick={() => router.push("/dietas/historico")}
           className="flex items-center gap-2 text-sm text-gray-300 hover:text-white mb-6"
@@ -50,42 +50,42 @@ export default function VisualizarDietaPage() {
           Voltar ao histórico
         </button>
 
-        {/* Título */}
+        {/* TÍTULO */}
         <div className="flex items-center gap-3 mb-4">
           <FileText className="w-6 h-6 text-emerald-400" />
           <h1 className="text-3xl font-bold">Plano Alimentar Completo</h1>
         </div>
 
-        {/* Data */}
+        {/* DATA */}
         {dieta && (
           <p className="text-gray-400 text-sm mb-10">
             Gerado em:{" "}
-            {new Date(dieta.criado_em).toLocaleString("pt-BR")}
+            {new Date(dieta.created_at || dieta.criado_em).toLocaleString("pt-BR")}
           </p>
         )}
 
-        {/* Loading */}
+        {/* LOADING */}
         {loading && (
           <div className="flex justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
           </div>
         )}
 
-        {/* Não encontrado */}
+        {/* NÃO ENCONTRADO */}
         {!loading && !dieta && (
           <p className="text-center text-gray-400 py-20">
             Dieta não encontrada.
           </p>
         )}
 
-        {/* Conteúdo */}
+        {/* CONTEÚDO */}
         {dieta && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-gray-900/40 border border-gray-800 p-6 rounded-2xl prose prose-invert max-w-none whitespace-pre-line text-sm"
           >
-            {dieta.plano_texto}
+            {dieta.plano}
           </motion.div>
         )}
       </main>
