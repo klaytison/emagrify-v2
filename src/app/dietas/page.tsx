@@ -1,232 +1,298 @@
+// src/app/dietas/page.tsx
 "use client";
 
-export const dynamic = "force-dynamic";
-
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { UtensilsCrossed, Loader2 } from "lucide-react";
-import { useSupabase } from "@/providers/SupabaseProvider";
-
-interface DietPlan {
-  id: string;
-  objetivo: string | null;
-  preferencias: string | null;
-  restricoes: string | null;
-  plano: any;
-  created_at: string;
-}
+import { motion } from "framer-motion";
+import { UtensilsCrossed, Sparkles, Loader2 } from "lucide-react";
 
 export default function DietasPage() {
-  const { supabase, session, loading } = useSupabase();
-
-  const [userId, setUserId] = useState<string | null>(null);
   const [objetivo, setObjetivo] = useState("");
-  const [preferencias, setPreferencias] = useState("");
+  const [sexo, setSexo] = useState<"feminino" | "masculino" | "outro" | "">("");
+  const [idade, setIdade] = useState("");
+  const [peso, setPeso] = useState("");
+  const [altura, setAltura] = useState("");
+  const [nivelAtividade, setNivelAtividade] = useState("");
+  const [refeicoesPorDia, setRefeicoesPorDia] = useState("3");
   const [restricoes, setRestricoes] = useState("");
+  const [preferencias, setPreferencias] = useState("");
+  const [rotina, setRotina] = useState("");
 
-  const [lastPlan, setLastPlan] = useState<DietPlan | null>(null);
+  const [planoGerado, setPlanoGerado] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState("");
 
-  const [loadingPlan, setLoadingPlan] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  async function gerarPlano() {
+    setErro("");
+    setPlanoGerado("");
 
-  // 1) Quando a sessão mudar, atualiza o userId
-  useEffect(() => {
-    if (!loading) {
-      if (session?.user?.id) {
-        setUserId(session.user.id);
-        setError(null);
-      } else {
-        setUserId(null);
-        setError("Nenhum usuário logado.");
-      }
-    }
-  }, [session, loading]);
-
-  // 2) Carregar última dieta salva
-  useEffect(() => {
-    if (!userId) return;
-
-    const loadPlan = async () => {
-      setLoadingPlan(true);
-
-      try {
-        const res = await fetch(`/api/dietas?userId=${userId}`);
-        const data = await res.json();
-
-        if (res.ok && data.plan) {
-          setLastPlan(data.plan);
-        }
-      } catch (err) {
-        setError("Erro ao carregar sua dieta.");
-      }
-
-      setLoadingPlan(false);
-    };
-
-    loadPlan();
-  }, [userId]);
-
-  // 3) Criar dieta nova
-  const handleGenerate = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!userId) {
-      setError("Você precisa estar logada.");
+    if (!objetivo || !peso || !altura) {
+      setErro("Preencha pelo menos objetivo, peso e altura.");
       return;
     }
 
-    setSaving(true);
-    setError(null);
-
     try {
+      setLoading(true);
+
       const res = await fetch("/api/dietas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId,
           objetivo,
-          preferencias,
+          sexo,
+          idade,
+          peso,
+          altura,
+          nivelAtividade,
+          refeicoesPorDia,
           restricoes,
+          preferencias,
+          rotina,
         }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        setError(data.error || "Erro ao gerar dieta.");
+        setErro("Não consegui gerar o plano agora. Tente novamente.");
         return;
       }
 
-      setLastPlan(data.plan);
-    } catch {
-      setError("Erro ao conectar com o servidor.");
+      const data = await res.json();
+      setPlanoGerado(data.plano || "");
+    } catch (e) {
+      console.error(e);
+      setErro("Erro de conexão. Tente de novo em alguns instantes.");
+    } finally {
+      setLoading(false);
     }
+  }
 
-    setSaving(false);
-  };
+  // Quebra as seções "###"
+  const secoes =
+    planoGerado
+      ?.split("###")
+      .map((s: string) => s.trim())
+      .filter((s: string) => s.length > 0) || [];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50">
       <Header />
 
-      <main className="container mx-auto px-4 py-10 max-w-5xl space-y-8 text-gray-900 dark:text-gray-50">
-
-        {/* Header */}
+      <main className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+        {/* Título */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#7BE4B7]/15 flex items-center justify-center">
-            <UtensilsCrossed className="w-6 h-6 text-[#7BE4B7]" />
+          <div className="w-10 h-10 rounded-full bg-emerald-500/15 flex items-center justify-center">
+            <UtensilsCrossed className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Dietas Personalizadas</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Gere planos alimentares inteligentes com IA baseados no seu objetivo.
+            <h1 className="text-3xl font-bold">Dietas Personalizadas com IA</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Conte como você é e o que precisa. A IA monta um dia de alimentação
+              sob medida para o seu objetivo.
             </p>
           </div>
         </div>
 
-        {/* Mensagens */}
-        {error && (
-          <div className="rounded-xl border border-red-300 bg-red-50 text-red-900 px-4 py-3 text-sm">
-            {error}
-          </div>
-        )}
+        <div className="grid lg:grid-cols-[1.1fr,0.9fr] gap-8">
+          {/* FORMULÁRIO */}
+          <section className="space-y-5">
+            <div className="bg-gray-100 dark:bg-gray-900/60 rounded-2xl p-5 border border-gray-200 dark:border-gray-800 space-y-4">
+              {/* Objetivo */}
+              <div>
+                <label className="text-sm font-semibold">Objetivo principal</label>
+                <input
+                  className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="Ex: emagrecer 8kg, ganhar massa, definir..."
+                  value={objetivo}
+                  onChange={(e) => setObjetivo(e.target.value)}
+                />
+              </div>
 
-        {loading && (
-          <p className="text-gray-500 flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" /> Carregando sessão…
-          </p>
-        )}
+              {/* Linha sexo + idade */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-semibold">Sexo</label>
+                  <select
+                    className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
+                    value={sexo}
+                    onChange={(e) =>
+                      setSexo(e.target.value as "feminino" | "masculino" | "outro" | "")
+                    }
+                  >
+                    <option value="">Selecione</option>
+                    <option value="feminino">Feminino</option>
+                    <option value="masculino">Masculino</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
 
-        {!loading && !userId && (
-          <div className="rounded-xl border border-yellow-300 bg-yellow-50 text-yellow-900 px-4 py-3 text-sm">
-            Nenhum usuário logado. Acesse sua conta para gerar dietas.
-          </div>
-        )}
+                <div>
+                  <label className="text-sm font-semibold">Idade</label>
+                  <input
+                    type="number"
+                    className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
+                    value={idade}
+                    onChange={(e) => setIdade(e.target.value)}
+                    placeholder="Anos"
+                  />
+                </div>
+              </div>
 
-        {/* Formulário */}
-        <Card className="dark:bg-gray-800">
-          <CardHeader>
-            <CardTitle>Gerar nova dieta</CardTitle>
-            <CardDescription>
-              Preencha abaixo para gerar sua dieta personalizada automaticamente com IA.
-            </CardDescription>
-          </CardHeader>
+              {/* Peso / Altura */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-semibold">Peso (kg)</label>
+                  <input
+                    type="number"
+                    className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
+                    value={peso}
+                    onChange={(e) => setPeso(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold">Altura (cm)</label>
+                  <input
+                    type="number"
+                    className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
+                    value={altura}
+                    onChange={(e) => setAltura(e.target.value)}
+                  />
+                </div>
+              </div>
 
-          <CardContent>
-            <form onSubmit={handleGenerate} className="space-y-4">
+              {/* Atividade / Refeições */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-semibold">
+                    Nível de atividade
+                  </label>
+                  <select
+                    className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
+                    value={nivelAtividade}
+                    onChange={(e) => setNivelAtividade(e.target.value)}
+                  >
+                    <option value="">Selecione</option>
+                    <option value="sedentária">Sedentária</option>
+                    <option value="leve">Leve</option>
+                    <option value="moderada">Moderada</option>
+                    <option value="intensa">Intensa</option>
+                  </select>
+                </div>
 
-              <input
-                type="text"
-                placeholder="Objetivo (ex: perder 5kg em 1 mês)"
-                value={objetivo}
-                onChange={(e) => setObjetivo(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-900"
-              />
+                <div>
+                  <label className="text-sm font-semibold">
+                    Refeições por dia
+                  </label>
+                  <input
+                    type="number"
+                    min={2}
+                    max={6}
+                    className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
+                    value={refeicoesPorDia}
+                    onChange={(e) => setRefeicoesPorDia(e.target.value)}
+                  />
+                </div>
+              </div>
 
-              <textarea
-                placeholder="Preferências alimentares"
-                rows={3}
-                value={preferencias}
-                onChange={(e) => setPreferencias(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-900"
-              />
+              {/* Restrições / preferências / rotina */}
+              <div>
+                <label className="text-sm font-semibold">
+                  Restrições / alergias
+                </label>
+                <textarea
+                  className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm min-h-[60px]"
+                  value={restricoes}
+                  onChange={(e) => setRestricoes(e.target.value)}
+                  placeholder="Ex: não como glúten, intolerância à lactose, não como porco..."
+                />
+              </div>
 
-              <textarea
-                placeholder="Restrições alimentares"
-                rows={3}
-                value={restricoes}
-                onChange={(e) => setRestricoes(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-900"
-              />
+              <div>
+                <label className="text-sm font-semibold">
+                  Preferências e aversões
+                </label>
+                <textarea
+                  className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm min-h-[60px]"
+                  value={preferencias}
+                  onChange={(e) => setPreferencias(e.target.value)}
+                  placeholder="Ex: amo café da manhã doce, odeio ovo, gosto de arroz e feijão..."
+                />
+              </div>
 
-              <Button
-                type="submit"
-                disabled={!userId || saving}
-                className="bg-[#7BE4B7] hover:bg-[#62cfa2] text-white"
-              >
-                {saving ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="animate-spin w-4 h-4" /> Gerando…
-                  </span>
-                ) : (
-                  "Gerar dieta com IA"
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+              <div>
+                <label className="text-sm font-semibold">
+                  Como é sua rotina no dia a dia?
+                </label>
+                <textarea
+                  className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm min-h-[60px]"
+                  value={rotina}
+                  onChange={(e) => setRotina(e.target.value)}
+                  placeholder="Trabalho, horários, se almoça fora, se come muito tarde, etc."
+                />
+              </div>
+            </div>
 
-        {/* Último plano */}
-        <Card className="dark:bg-gray-800">
-          <CardHeader>
-            <CardTitle>Última dieta gerada</CardTitle>
-          </CardHeader>
-
-          <CardContent>
-            {loadingPlan ? (
-              <p className="text-gray-500 flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" /> Carregando dieta…
-              </p>
-            ) : !lastPlan ? (
-              <p className="text-gray-500">
-                Nenhuma dieta gerada ainda.
-              </p>
-            ) : (
-              <pre className="text-sm bg-black/20 p-4 rounded-lg whitespace-pre-wrap">
-                {JSON.stringify(lastPlan.plano, null, 2)}
-              </pre>
+            {erro && (
+              <p className="text-sm text-red-400 font-medium">{erro}</p>
             )}
-          </CardContent>
-        </Card>
+
+            <Button
+              onClick={gerarPlano}
+              disabled={loading}
+              className="w-full py-3 text-base bg-emerald-500 hover:bg-emerald-600 font-semibold flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Gerando plano com IA...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Gerar plano com IA
+                </>
+              )}
+            </Button>
+          </section>
+
+          {/* RESULTADO */}
+          <section className="bg-gray-100 dark:bg-gray-900/60 rounded-2xl p-5 border border-gray-200 dark:border-gray-800 min-h-[260px]">
+            {!planoGerado && !loading && (
+              <div className="h-full flex flex-col items-center justify-center text-center text-gray-500 dark:text-gray-400 text-sm">
+                <Sparkles className="w-8 h-8 mb-3 text-emerald-400" />
+                <p>
+                  Preencha seus dados ao lado e clique{" "}
+                  <span className="font-semibold">“Gerar plano com IA”</span>.
+                </p>
+                <p>Vou montar um dia completo de alimentação só pra você.</p>
+              </div>
+            )}
+
+            {planoGerado && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="prose prose-invert max-w-none text-sm"
+              >
+                {secoes.map((secao, idx) => {
+                  const [titulo, ...resto] = secao.split("\n");
+                  const conteudo = resto.join("\n").trim();
+
+                  return (
+                    <div key={idx} className="mb-5">
+                      <h3 className="text-base font-semibold text-emerald-400 mb-1">
+                        {titulo}
+                      </h3>
+                      <p className="whitespace-pre-line text-gray-200">
+                        {conteudo}
+                      </p>
+                    </div>
+                  );
+                })}
+              </motion.div>
+            )}
+          </section>
+        </div>
       </main>
     </div>
   );
