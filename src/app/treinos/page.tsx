@@ -44,7 +44,7 @@ export default function TreinosPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/treinos-adaptados", {
+      const res = await fetch("/api/treinos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
