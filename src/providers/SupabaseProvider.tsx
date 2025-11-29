@@ -29,32 +29,43 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Carrega sessão inicial apenas 1x
   useEffect(() => {
-    let isMounted = true;
+    let mounted = true;
 
-    const load = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (!isMounted) return;
-        setSession(data.session ?? null);
-        setUser(data.session?.user ?? null);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
+    const loadInitial = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!mounted) return;
+
+      setSession((prev) => {
+        return prev?.access_token === data.session?.access_token
+          ? prev
+          : data.session ?? null;
+      });
+
+      setUser(data.session?.user ?? null);
+      setLoading(false);
     };
 
-    load();
+    loadInitial();
 
+    // Listener otimizado
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session ?? null);
-      setUser(session?.user ?? null);
-      setLoading(false);
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession((prev) => {
+        // evita re-render desnecessário
+        if (prev?.access_token === newSession?.access_token) {
+          return prev;
+        }
+        return newSession ?? null;
+      });
+
+      setUser(newSession?.user ?? null);
     });
 
     return () => {
-      isMounted = false;
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [supabase]);
@@ -71,17 +82,17 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     setUser(data.session?.user ?? null);
   };
 
-  const value: SupabaseContextType = {
-    supabase,
-    session,
-    user,
-    loading,
-    signOut,
-    refreshSession,
-  };
-
   return (
-    <SupabaseContext.Provider value={value}>
+    <SupabaseContext.Provider
+      value={{
+        supabase,
+        session,
+        user,
+        loading,
+        signOut,
+        refreshSession,
+      }}
+    >
       {children}
     </SupabaseContext.Provider>
   );
