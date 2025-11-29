@@ -1,10 +1,9 @@
 "use client";
 
 import { createBrowserClient } from "@supabase/ssr";
-import type { Session, User, SupabaseClient } from "@supabase/supabase-js";
-import { createContext, useContext, useEffect, useState } from "react";
+import { Session, SupabaseClient, User } from "@supabase/supabase-js";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
-// ---------- CONTEXTO ----------
 type SupabaseContextType = {
   supabase: SupabaseClient;
   session: Session | null;
@@ -18,58 +17,52 @@ const SupabaseContext = createContext<SupabaseContextType | undefined>(
   undefined
 );
 
-// ---------- PROVIDER ----------
 export function SupabaseProvider({ children }: { children: React.ReactNode }) {
-  // CLIENT DO SUPABASE
-  const [supabase] = useState(() =>
-    createBrowserClient(
+  // ❗ O segredo para parar o bug: NÃO recriar o cliente em toda renderização
+  const supabaseRef = useRef<SupabaseClient | null>(null);
+
+  if (!supabaseRef.current) {
+    supabaseRef.current = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-  );
+    );
+  }
+
+  const supabase = supabaseRef.current;
 
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // ---------- CARREGAR SESSÃO UMA ÚNICA VEZ ----------
+  // Carregar sessão 1 vez só
   useEffect(() => {
-    let isMounted = true;
+    let active = true;
 
-    const loadSession = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (!isMounted) return;
+    async function load() {
+      const { data } = await supabase.auth.getSession();
+      if (!active) return;
 
-        setSession(data.session ?? null);
-        setUser(data.session?.user ?? null);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
+      setSession(data.session ?? null);
+      setUser(data.session?.user ?? null);
+      setLoading(false);
+    }
 
-    loadSession();
+    load();
 
-    // ---------- LISTENER SEGURO (SEM RE-RENDER AO DIGITAR!) ----------
+    // Listener de login/logout
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      // só atualiza se o token REALMENTE mudou
-      setSession((prev) => {
-        if (prev?.access_token === newSession?.access_token) return prev;
-        return newSession ?? null;
-      });
-
-      setUser(newSession?.user ?? null);
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session ?? null);
+      setUser(session?.user ?? null);
     });
 
     return () => {
-      isMounted = false;
+      active = false;
       subscription.unsubscribe();
     };
   }, [supabase]);
 
-  // ---------- FUNÇÕES ----------
   const signOut = async () => {
     await supabase.auth.signOut();
     setSession(null);
@@ -82,7 +75,6 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     setUser(data.session?.user ?? null);
   };
 
-  // ---------- VALOR FINAL ----------
   return (
     <SupabaseContext.Provider
       value={{
@@ -99,13 +91,10 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ---------- HOOK ----------
 export function useSupabase() {
-  const context = useContext(SupabaseContext);
-  if (!context) {
-    throw new Error(
-      "useSupabase deve ser usado dentro de um SupabaseProvider"
-    );
+  const ctx = useContext(SupabaseContext);
+  if (!ctx) {
+    throw new Error("useSupabase deve ser usado dentro de um SupabaseProvider");
   }
-  return context;
+  return ctx;
 }
