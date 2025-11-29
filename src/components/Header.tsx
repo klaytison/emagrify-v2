@@ -26,17 +26,31 @@ export default function HeaderMenu() {
   const { supabase } = useSupabase();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
+  // carregamento do tema sem toggle, sem piscar
   useEffect(() => {
     const stored = localStorage.getItem("theme");
-    if (stored) setTheme(stored);
+
+    if (stored === "light") {
+      document.documentElement.classList.remove("dark");
+      setTheme("light");
+    } else {
+      document.documentElement.classList.add("dark");
+      setTheme("dark");
+    }
   }, []);
 
   const toggleTheme = () => {
     const newTheme = theme === "dark" ? "light" : "dark";
     setTheme(newTheme);
-    document.documentElement.classList.toggle("dark");
+
+    if (newTheme === "light") {
+      document.documentElement.classList.remove("dark");
+    } else {
+      document.documentElement.classList.add("dark");
+    }
+
     localStorage.setItem("theme", newTheme);
   };
 
@@ -69,7 +83,7 @@ export default function HeaderMenu() {
             </Button>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent>
+          <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => router.push("/dashboard")}>
               <LayoutDashboard size={16} className="mr-2" /> Dashboard
             </DropdownMenuItem>
