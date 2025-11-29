@@ -9,13 +9,8 @@ const openai = new OpenAI({
 
 export async function POST(req: NextRequest) {
   try {
-    // -------------------------------
-    // 1) Supabase (sessão do usuário)
-    // -------------------------------
     const supabase = createRouteHandlerClient({ cookies });
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
 
     if (!session?.user) {
       return NextResponse.json(
@@ -24,9 +19,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // -------------------------------
-    // 2) Dados enviados pelo front
-    // -------------------------------
     const body = await req.json();
 
     const {
@@ -52,67 +44,44 @@ export async function POST(req: NextRequest) {
       objetivoSecundario,
     } = body;
 
-    // -------------------------------
-    // 3) Prompt para IA  
-    // -------------------------------
     const messages = [
       {
-        role: "system" as const,
+        role: "system",
         content:
-          "Você é uma nutricionista experiente, direta e prática. " +
-          "Crie planos alimentares simples, realistas, em português do Brasil, " +
-          "e bem personalizados. Sempre deixe claro que é uma sugestão.",
+          "Você é uma nutricionista experiente, direta e prática. Crie planos alimentares simples e realistas."
       },
       {
-        role: "user" as const,
+        role: "user",
         content: `
 Dados completos da pessoa:
 
 Objetivo principal: ${objetivo}
 Objetivo secundário: ${objetivoSecundario}
-
 Sexo: ${sexo}
 Idade: ${idade}
-Peso: ${peso} kg  
-Altura: ${altura} cm  
+Peso: ${peso} kg
+Altura: ${altura} cm
 Nível de atividade: ${nivelAtividade}
-
 Refeições por dia: ${refeicoesPorDia}
 Restrições: ${restricoes}
 Preferências: ${preferencias}
-Rotina geral: ${rotina}
-
-Horário que acorda: ${acorda}
-Horário que dorme: ${dorme}
-
+Rotina: ${rotina}
+Acorda: ${acorda}
+Dorme: ${dorme}
 Preferência de sabor: ${preferenciaSabor}
-Come de madrugada? ${madrugada}
-
-Nível de estresse: ${estresse}
-Consumo de cafeína: ${cafeina}
-Rotina de treino: ${treino}
+Come de madrugada: ${madrugada}
+Estresse: ${estresse}
+Cafeína: ${cafeina}
+Treino: ${treino}
 Horas sentado: ${horasSentado}
 Orçamento diário: R$${orcamento}
 
-Crie um plano ALIMENTAR COMPLETO de 1 dia, seguindo as regras:
-
-### Regras obrigatórias:
-- Use títulos com "###"
-- Divida em seções: Resumo, Perfil nutricional, Refeições do dia, Substituições, Observações
-- Adapte totalmente ao estilo de vida e horários
-- Ajuste refeições conforme número informado
-- Sempre respeite preferências e restrições
-- Ofereça substituições simples
-- Linguagem simples e direta
-- No final coloque:
-  "Essa sugestão não substitui acompanhamento nutricional profissional."
-`,
-      },
+Monte um plano alimentar completo para 1 dia.
+Use títulos com ###.
+`
+      }
     ];
 
-    // -------------------------------
-    // 4) Chamada à IA
-    // -------------------------------
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       messages,
@@ -122,12 +91,10 @@ Crie um plano ALIMENTAR COMPLETO de 1 dia, seguindo as regras:
 
     const textoGerado =
       completion.choices[0]?.message?.content ||
-      "Não consegui gerar o plano agora. Tente novamente.";
+      "Não consegui gerar o plano agora.";
 
-    // -------------------------------
-    // 5) Salvar no Supabase
-    // -------------------------------
-    await supabase.from("dietas_geradas").insert({
+    // 🟢 SALVANDO NA COLUNA CORRETA
+    const { error: insertError } = await supabase.from("dietas_geradas").insert({
       user_id: session.user.id,
       dados: {
         objetivo,
@@ -151,17 +118,20 @@ Crie um plano ALIMENTAR COMPLETO de 1 dia, seguindo as regras:
         orcamento,
         objetivoSecundario,
       },
-      plano: textoGerado,
+      plano_texto: textoGerado, // ✔ AGORA ESTÁ CORRETO
     });
 
-    // -------------------------------
-    // 6) Retorno
-    // -------------------------------
-    return NextResponse.json({
-      plano: textoGerado,
-    });
+    if (insertError) {
+      console.error(insertError);
+      return NextResponse.json(
+        { error: "Erro ao salvar no banco." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ plano: textoGerado });
   } catch (error) {
-    console.error("Erro na rota /api/dietas:", error);
+    console.error("Erro interno:", error);
     return NextResponse.json(
       { error: "Erro interno ao gerar plano." },
       { status: 500 }
