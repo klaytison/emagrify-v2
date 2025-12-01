@@ -32,29 +32,40 @@ export default function TreinosPage() {
     setForm((old) => ({ ...old, [k]: v }));
   }
 
-  async function gerarTreino() {
-    setErro("");
-    setLoading(true);
+async function gerarTreino() {
+  setErro("");
+  setLoading(true);
 
-    const response = await supabase.functions.invoke("treinos", {
-      body: form,
-    });
+  const { data, error } = await supabase.functions.invoke("treinos", {
+    body: form,
+  });
 
-    setLoading(false);
+  setLoading(false);
 
-    console.log("RESPOSTA DA FUNCTION:", response);
-
-    // Agora sempre pega o id, independente do formato
-    const treino = response.data || response;
-
-    if (!treino || !treino.id) {
-      console.error("ERRO: retorno inválido:", response);
-      setErro("Não consegui gerar seu treino. Tente novamente.");
-      return;
-    }
-
-    window.location.href = `/treinos/${treino.id}`;
+  if (error || !data) {
+    console.error(error);
+    setErro("Não consegui gerar seu treino. Tente novamente.");
+    return;
   }
+
+  // Agora convertemos o JSON que vem como string
+  let resposta;
+  try {
+    resposta = JSON.parse(data);
+  } catch (e) {
+    console.error("Erro ao parsear retorno:", data);
+    setErro("Retorno inválido do servidor.");
+    return;
+  }
+
+  if (!resposta?.id) {
+    console.error("Sem ID no retorno:", resposta);
+    setErro("Não consegui gerar seu treino.");
+    return;
+  }
+
+  window.location.href = `/treinos/${resposta.id}`;
+}
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
