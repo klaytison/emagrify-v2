@@ -36,19 +36,24 @@ export default function TreinosPage() {
     setErro("");
     setLoading(true);
 
-    const { data, error } = await supabase.functions.invoke("treinos", {
+    const response = await supabase.functions.invoke("treinos", {
       body: form,
     });
 
     setLoading(false);
 
-    if (error || !data) {
-      console.error(error);
+    console.log("RESPOSTA DA FUNCTION:", response);
+
+    // Agora sempre pega o id, independente do formato
+    const treino = response.data || response;
+
+    if (!treino || !treino.id) {
+      console.error("ERRO: retorno inválido:", response);
       setErro("Não consegui gerar seu treino. Tente novamente.");
       return;
     }
 
-    window.location.href = `/treinos/${data.id}`;
+    window.location.href = `/treinos/${treino.id}`;
   }
 
   return (
