@@ -248,3 +248,4 @@ function Table({ headers, rows }: any) {
     </div>
   );
 }
+
