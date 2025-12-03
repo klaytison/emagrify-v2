@@ -1,410 +1,579 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { useSupabase } from "@/providers/SupabaseProvider";
+import { useEffect, useState } from "react";
 import Header from "@/components/Header";
-import { Loader2, Target, CheckCircle2, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  Flame,
+  Sparkles,
+  Swords,
+  Target,
+  Calendar,
+  Trophy,
+  CheckCircle2,
+  Clock,
+  ChevronRight,
+  Star,
+} from "lucide-react";
 
-type Desafio = {
+// Tipos de dados
+type MissaoTipo = "treino" | "extra" | "bonus";
+
+interface Missao {
   id: string;
-  user_id: string;
-  semana: string;
+  tipo: MissaoTipo;
   titulo: string;
   descricao: string;
-  progresso: boolean[];
+  recompensaXp: number;
+  concluida: boolean;
+  obrigatoria: boolean;
+  ligadoATreinoId?: string | null;
+}
+
+interface DesafioSemanalIA {
+  id: string;
+  tema: string;
+  subtitulo: string;
+  semanaTexto: string;
+  focoPrincipal: string;
+  focoSecundario: string;
+  caloriasAlvo: number;
+  treinosAlvo: number;
+  missoes: Missao[];
+  xpTotal: number;
+  xpAtual: number;
+  nivelBatalha: "Bronze" | "Prata" | "Ouro" | "Lendário";
+}
+
+// 💡 Mock de desafio gerado 100% pela IA (por enquanto fixo)
+// Depois você pode trocar para um fetch em /api/desafios/semana
+const desafioMockIA: DesafioSemanalIA = {
+  id: "semana-1",
+  tema: "Semana do Bumbum & Abdômen",
+  subtitulo:
+    "Desafio temático com foco em glúteos e core, em formato de batalha semanal.",
+  semanaTexto: "Semana 12 · 2025",
+  focoPrincipal: "Glúteos e abdômen",
+  focoSecundario: "Resistência e queima de gordura",
+  caloriasAlvo: 1200,
+  treinosAlvo: 4,
+  xpTotal: 400,
+  xpAtual: 180,
+  nivelBatalha: "Prata",
+  missoes: [
+    {
+      id: "m1",
+      tipo: "treino",
+      titulo: "Treino IA — Lower Body Fire",
+      descricao:
+        "Treino guiado com foco em glúteos e posterior de coxa. Inclui agachamentos, avanços e elevações pélvicas.",
+      recompensaXp: 100,
+      concluida: true,
+      obrigatoria: true,
+      ligadoATreinoId: "treino-lower-1",
+    },
+    {
+      id: "m2",
+      tipo: "treino",
+      titulo: "Treino IA — Core Definido",
+      descricao:
+        "Sequência de prancha, crunches e elevações de perna para ativar profundamente o abdômen.",
+      recompensaXp: 100,
+      concluida: false,
+      obrigatoria: true,
+      ligadoATreinoId: "treino-core-1",
+    },
+    {
+      id: "m3",
+      tipo: "extra",
+      titulo: "Missão Cardio — Queima Rápida",
+      descricao: "20 a 30 minutos de caminhada acelerada ou bicicleta leve.",
+      recompensaXp: 60,
+      concluida: false,
+      obrigatoria: false,
+    },
+    {
+      id: "m4",
+      tipo: "extra",
+      titulo: "Missão Alongamento — Recuperação Inteligente",
+      descricao: "Sessão de alongamentos focados em lombar, quadril e posterior.",
+      recompensaXp: 40,
+      concluida: true,
+      obrigatoria: false,
+    },
+    {
+      id: "m5",
+      tipo: "bonus",
+      titulo: "Batalha Relâmpago — 5 min de prancha acumulada",
+      descricao:
+        "Some o tempo de prancha do dia e tente chegar a 5 minutos no total.",
+      recompensaXp: 100,
+      concluida: false,
+      obrigatoria: false,
+    },
+  ],
 };
 
 export default function DesafiosSemanaisPage() {
-  const { supabase, session } = useSupabase();
-
+  const [desafio, setDesafio] = useState<DesafioSemanalIA | null>(null);
   const [loading, setLoading] = useState(true);
-  const [salvando, setSalvando] = useState(false);
-  const [desafio, setDesafio] = useState<Desafio | null>(null);
-  const [progresso, setProgresso] = useState<boolean[]>(new Array(7).fill(false));
 
-  // 🔊 Som para mensagens motivacionais
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
+  // Simula carregamento de IA
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!audioRef.current) {
-      // Coloque um arquivo em /public/sounds/desafio-pop.mp3
-      audioRef.current = new Audio("/sounds/desafio-pop.mp3");
-      audioRef.current.volume = 0.4;
-    }
+    // Aqui futuramente você troca por um fetch para a sua função de IA:
+    // fetch("/api/desafios/semana").then(...)
+    setTimeout(() => {
+      setDesafio(desafioMockIA);
+      setLoading(false);
+    }, 300);
   }, []);
 
-  // ⭐ Mensagem motivacional (ETAPA C)
-  const [mensagem, setMensagem] = useState("");
-
-  useEffect(() => {
-    const total = progresso.filter(Boolean).length;
-
-    if (total === 0) {
-      setMensagem("Toda jornada começa com o primeiro passo! Você consegue 💚");
-    } else if (total <= 2) {
-      setMensagem("Ótimo começo! Continue assim ✨");
-    } else if (total < 4) {
-      setMensagem("Metade da semana concluída! Você está indo muito bem 🔥");
-    } else if (total < 6) {
-      setMensagem("Você está muito perto de completar o desafio! 🏅");
-    } else if (total < 7) {
-      setMensagem("Desafio quase completo! Orgulho demais 🧡");
-    } else {
-      setMensagem("Desafio da semana completo! Perfeita demais! 🏆");
-    }
-  }, [progresso]);
-
-  // Toca o som sempre que a mensagem mudar
-  useEffect(() => {
-    if (!mensagem) return;
-    if (!audioRef.current) return;
-
-    try {
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(() => {
-        // se o navegador bloquear autoplay, só ignora
-      });
-    } catch {
-      // ignora erros de áudio
-    }
-  }, [mensagem]);
-
-  // Carregar desafio da semana atual
-  async function carregarDesafio() {
-    if (!session?.user?.id) return;
-
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/desafios/semana", {
-        headers: {
-          "x-user-id": session.user.id,
-        },
-      });
-
-      const data = await res.json();
-
-      if (data?.desafio) {
-        setDesafio(data.desafio);
-        setProgresso(data.desafio.progresso || new Array(7).fill(false));
-      }
-    } catch (e) {
-      console.error("Erro ao carregar desafio:", e);
-    }
-
-    setLoading(false);
-  }
-
-  // Salvar progresso
-  async function salvarProgresso() {
-    if (!session?.user?.id) return;
-
-    setSalvando(true);
-
-    try {
-      const res = await fetch("/api/desafios/semana", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: session.user.id,
-          progresso,
-        }),
-      });
-
-      const data = await res.json();
-      if (data?.desafio) setDesafio(data.desafio);
-    } catch (e) {
-      console.error("Erro ao salvar progresso:", e);
-    }
-
-    setSalvando(false);
-  }
-
-  useEffect(() => {
-    carregarDesafio();
-  }, [session]);
-
-  if (!session?.user) {
+  if (loading || !desafio) {
     return (
-      <div className="flex items-center justify-center min-h-screen text-gray-300">
-        Você precisa estar logada para acessar seus desafios semanais 😊
+      <div className="min-h-screen bg-slate-950 text-gray-100">
+        <Header />
+        <main className="max-w-5xl mx-auto px-4 py-10">
+          <div className="animate-pulse space-y-6">
+            <div className="h-10 w-40 bg-slate-800 rounded-full" />
+            <div className="h-40 bg-slate-900 rounded-3xl" />
+            <div className="h-32 bg-slate-900 rounded-2xl" />
+          </div>
+        </main>
       </div>
     );
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen text-gray-400">
-        <Loader2 className="w-6 h-6 animate-spin" />
-      </div>
-    );
+  const progressoTreinosObrigatorios =
+    desafio.missoes.filter((m) => m.obrigatoria).filter((m) => m.concluida)
+      .length / desafio.missoes.filter((m) => m.obrigatoria).length;
+
+  const progressoMissoes =
+    desafio.missoes.filter((m) => m.concluida).length / desafio.missoes.length;
+
+  const xpPercent = Math.min((desafio.xpAtual / desafio.xpTotal) * 100, 100);
+
+  function badgeNivel(nivel: DesafioSemanalIA["nivelBatalha"]) {
+    if (nivel === "Bronze")
+      return "bg-amber-500/15 text-amber-300 border-amber-500/30";
+    if (nivel === "Prata")
+      return "bg-slate-200/10 text-slate-100 border-slate-300/30";
+    if (nivel === "Ouro")
+      return "bg-yellow-400/20 text-yellow-200 border-yellow-400/40";
+    return "bg-purple-500/20 text-purple-200 border-purple-400/40";
   }
 
-  const progressoCount = progresso.filter(Boolean).length;
-  const progressoPercent = (progressoCount / 7) * 100;
-  const semanaAtual = desafio?.semana;
+  function getTipoLabel(tipo: MissaoTipo) {
+    if (tipo === "treino") return "Treino principal";
+    if (tipo === "extra") return "Missão extra";
+    return "Missão bônus";
+  }
+
+  function getTipoCor(tipo: MissaoTipo) {
+    if (tipo === "treino") return "text-emerald-300 bg-emerald-500/10";
+    if (tipo === "extra") return "text-sky-300 bg-sky-500/10";
+    return "text-violet-300 bg-violet-500/10";
+  }
 
   return (
-    <motion.div
-      className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
-    >
+    <div className="min-h-screen bg-slate-950 text-slate-50">
       <Header />
 
-      <main className="max-w-4xl mx-auto px-4 py-10 space-y-10">
-        {/* Cabeçalho */}
-        <section className="space-y-3">
-          <motion.div
-            className="inline-flex items-center gap-2 text-orange-400 bg-orange-400/10 px-3 py-1 text-xs rounded-full font-semibold"
-            initial={{ scale: 0.8, opacity: 0, y: -10 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Target className="w-3 h-3" />
-            Desafios Semanais
-          </motion.div>
-
-          <motion.h1
-            className="text-3xl font-bold"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-          >
-            {desafio?.titulo}
-          </motion.h1>
-
-          <motion.p
-            className="text-gray-600 dark:text-gray-400"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            {desafio?.descricao}
-          </motion.p>
-        </section>
-
-        {/* 💬 Mensagem motivacional com animação bonita */}
-        <AnimatePresence>
-          {mensagem && (
-            <motion.div
-              key={mensagem}
-              initial={{ opacity: 0, y: 10, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.97 }}
-              transition={{ duration: 0.35 }}
-              className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-emerald-400/5 to-transparent px-4 py-3"
-            >
-              {/* Glow animado de fundo */}
-              <motion.div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.25),_transparent_55%)]"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.6 }}
-              />
-              <div className="relative flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/20">
-                  <Target className="w-4 h-4 text-emerald-300" />
-                </div>
-                <p className="text-sm text-emerald-50 dark:text-emerald-100">
-                  {mensagem}
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Card principal do desafio */}
-        <motion.section
-          className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-900/60 p-5 space-y-4 shadow-sm"
-          initial={{ opacity: 0, y: 20, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.35 }}
-        >
-          {/* Barra de progresso com animação */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold">Seu progresso na semana</h2>
-              {semanaAtual && (
-                <span className="text-[11px] rounded-full border border-emerald-400/40 px-2 py-0.5 text-emerald-300 bg-emerald-500/10">
-                  Semana {semanaAtual}
-                </span>
-              )}
-            </div>
-
-            <div className="w-full h-3 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-emerald-500"
-                initial={{ width: 0 }}
-                animate={{ width: `${progressoPercent}%` }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-              />
-            </div>
-
-            {/* número animado */}
-            <motion.p
-              key={progressoCount}
-              initial={{ opacity: 0, y: -5 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-sm text-gray-500"
-            >
-              {progressoCount} de 7 dias completos
-            </motion.p>
+      <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+        {/* topo */}
+        <section className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.14em] text-emerald-400 flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              Desafios semanais com IA
+            </p>
+            <h1 className="mt-1 text-2xl md:text-3xl font-bold tracking-tight">
+              {desafio.tema}
+            </h1>
+            <p className="mt-1 text-xs md:text-sm text-slate-400">
+              {desafio.subtitulo}
+            </p>
           </div>
 
-          {/* Dias da semana */}
-          <section className="grid grid-cols-7 gap-3 pt-2">
-            {["S", "T", "Q", "Q", "S", "S", "D"].map((dia, index) => {
-              const marcado = progresso[index];
+          <div className="flex flex-col items-start md:items-end gap-1 text-xs">
+            <span className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1">
+              <Calendar className="w-3 h-3 text-slate-400" />
+              {desafio.semanaTexto}
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1">
+              <Sparkles className="w-3 h-3 text-emerald-400" />
+              Gerado automaticamente pela IA do Emagrify
+            </span>
+          </div>
+        </section>
 
-              return (
-                <motion.button
-                  key={index}
-                  whileTap={{ scale: 0.9 }}
-                  whileHover={{ y: -3 }}
-                  onClick={() => {
-                    const novo = [...progresso];
-                    novo[index] = !novo[index];
-                    setProgresso(novo);
-                  }}
-                  className={`p-4 rounded-xl border text-center transition ${
-                    marcado
-                      ? "bg-emerald-500 text-white border-emerald-600 shadow-md shadow-emerald-500/30"
-                      : "bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-500"
-                  }`}
-                >
-                  <AnimatePresence mode="popLayout">
-                    {marcado ? (
-                      <motion.div
-                        key="check"
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0, opacity: 0 }}
-                      >
-                        <CheckCircle2 className="w-5 h-5 mx-auto" />
-                      </motion.div>
-                    ) : (
-                      <motion.span
-                        key="letter"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                      >
-                        {dia}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </motion.button>
-              );
-            })}
-          </section>
+        {/* card principal: tema + batalha */}
+        <section className="grid md:grid-cols-[1.2fr,0.8fr] gap-5">
+          {/* Tema da semana */}
+          <div className="rounded-3xl border border-slate-800 bg-gradient-to-br from-emerald-500/10 via-slate-900 to-slate-950 p-5 md:p-6 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-300">
+                  Tema da semana (IA)
+                </p>
+                <p className="text-sm text-slate-200">
+                  Foco principal:{" "}
+                  <span className="font-semibold">
+                    {desafio.focoPrincipal}
+                  </span>
+                </p>
+                <p className="text-xs text-slate-400">
+                  Foco secundário: {desafio.focoSecundario}
+                </p>
+              </div>
 
-          {/* Botão salvar */}
-          <section className="pt-4 flex justify-end">
-            <motion.div whileTap={{ scale: 0.95 }}>
-              <Button
-                onClick={salvarProgresso}
-                disabled={salvando}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white px-6"
-              >
-                {salvando ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  "Salvar progresso semanal"
-                )}
-              </Button>
-            </motion.div>
-          </section>
-        </motion.section>
-
-        {/* Cards extras: visão detalhada + histórico */}
-        <section className="grid md:grid-cols-2 gap-4">
-          {/* Card visão detalhada da semana */}
-          <motion.div
-            className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/60 p-4 flex flex-col justify-between"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            whileHover={{ y: -4, boxShadow: "0 18px 35px rgba(0,0,0,0.28)" }}
-          >
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wide">
-                Detalhes da semana
-              </p>
-              <h2 className="text-lg font-semibold">Ver progresso dia a dia</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Acesse a visão detalhada desta semana e veja exatamente quais dias você marcou como concluídos.
-              </p>
-            </div>
-
-            <div className="pt-4 flex justify-between items-center">
-              <span className="text-xs text-gray-500">
-                Progresso atual:{" "}
-                <span className="font-semibold text-emerald-400">
-                  {progressoCount}/7
+              <div className="hidden md:flex flex-col items-end text-right text-xs">
+                <span className="text-slate-300">Treinos alvo</span>
+                <span className="text-xl font-semibold">
+                  {desafio.treinosAlvo}
                 </span>
-              </span>
-
-              {semanaAtual ? (
-                <Link href={`/desafios/${semanaAtual}`}>
-                  <Button
-                    variant="outline"
-                    className="border-emerald-500/60 text-emerald-400 hover:bg-emerald-500 hover:text-white text-xs px-3 py-1"
-                  >
-                    Abrir visão detalhada
-                  </Button>
-                </Link>
-              ) : (
-                <Button
-                  variant="outline"
-                  disabled
-                  className="border-gray-500/40 text-gray-400 text-xs px-3 py-1"
-                >
-                  Semana não encontrada
-                </Button>
-              )}
+                <span className="text-[11px] text-slate-500">
+                  sugeridos pela IA
+                </span>
+              </div>
             </div>
-          </motion.div>
 
-          {/* Card histórico */}
-          <motion.div
-            className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/60 p-4 flex flex-col justify-between"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            whileHover={{ y: -4, boxShadow: "0 18px 35px rgba(0,0,0,0.28)" }}
-          >
+            {/* metas principais */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-3 flex items-center gap-3">
+                <Flame className="w-4 h-4 text-amber-400" />
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                    Meta de calorias
+                  </p>
+                  <p className="font-semibold text-slate-50">
+                    {desafio.caloriasAlvo} kcal
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    estimadas pela IA
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-3 flex items-center gap-3">
+                <Target className="w-4 h-4 text-emerald-400" />
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                    Treinos principais
+                  </p>
+                  <p className="font-semibold text-slate-50">
+                    {desafio.missoes.filter((m) => m.obrigatoria).length} treinos
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    temáticos da semana
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-3 flex items-center gap-3">
+                <Clock className="w-4 h-4 text-sky-400" />
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                    Progresso geral
+                  </p>
+                  <p className="font-semibold text-slate-50">
+                    {Math.round(progressoMissoes * 100)}%
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    missões concluídas
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* barra de progresso treinos obrigatórios */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-sky-400 uppercase tracking-wide">
-                Histórico
-              </p>
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <History className="w-4 h-4 text-sky-400" />
-                Ver desafios anteriores
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Compare semanas, veja quais você concluiu mais dias e acompanhe sua consistência ao longo do tempo.
-              </p>
+              <div className="flex items-center justify-between text-[11px] text-slate-400">
+                <span>Progresso dos treinos principais</span>
+                <span>
+                  {Math.round(progressoTreinosObrigatorios * 100)}% completos
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-emerald-400 via-emerald-500 to-sky-400 transition-all"
+                  style={{
+                    width: `${Math.min(
+                      progressoTreinosObrigatorios * 100,
+                      100
+                    )}%`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Batalha da semana */}
+          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 flex items-center gap-1">
+                  <Swords className="w-4 h-4 text-violet-300" />
+                  Batalha da semana
+                </p>
+                <p className="mt-1 text-sm font-semibold text-slate-50">
+                  Nível atual:{" "}
+                  <span className="font-bold">{desafio.nivelBatalha}</span>
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  Suba de nível completando treinos e missões IA.
+                </p>
+              </div>
+
+              <div
+                className={`px-3 py-2 rounded-2xl border text-[11px] font-semibold flex flex-col items-end gap-1 ${badgeNivel(
+                  desafio.nivelBatalha
+                )}`}
+              >
+                <span className="flex items-center gap-1">
+                  <Trophy className="w-3 h-3" />
+                  Liga
+                </span>
+                <span>{desafio.nivelBatalha}</span>
+              </div>
             </div>
 
-            <div className="pt-4 flex justify-end">
-              <Link href="/desafios/historico">
-                <Button className="bg-sky-500 hover:bg-sky-600 text-white text-xs px-4 py-1.5">
-                  Abrir histórico
-                </Button>
-              </Link>
+            {/* XP */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[11px] text-slate-400">
+                <span>XP da semana</span>
+                <span>
+                  {desafio.xpAtual} / {desafio.xpTotal} XP
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-violet-400 via-emerald-400 to-amber-300 transition-all"
+                  style={{ width: `${xpPercent}%` }}
+                />
+              </div>
             </div>
-          </motion.div>
+
+            <div className="flex flex-wrap gap-2 text-[11px] text-slate-400">
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-900 border border-slate-700">
+                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                {desafio.missoes.filter((m) => m.concluida).length} /{" "}
+                {desafio.missoes.length} missões
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-900 border border-slate-700">
+                <Star className="w-3 h-3 text-yellow-300" />
+                IA ativa — desafios ajustados ao seu perfil
+              </span>
+            </div>
+
+            <Button className="w-full mt-1 bg-emerald-600 hover:bg-emerald-700 text-xs md:text-sm flex items-center justify-center gap-2">
+              Ver plano da semana
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </section>
+
+        {/* missões divididas em seções: treinos, extras, bônus */}
+        <section className="space-y-5">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm md:text-base font-semibold flex items-center gap-2">
+              <Target className="w-4 h-4 text-emerald-400" />
+              Missões da semana
+            </h2>
+            <p className="text-[11px] md:text-xs text-slate-400">
+              Todas as missões foram montadas pela IA com base no seu objetivo,
+              nível e foco da semana.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {/* TREINOS PRINCIPAIS */}
+            <div className="space-y-2">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 flex items-center gap-2">
+                <Dumbbell className="w-3 h-3 text-emerald-400" />
+                Treinos principais da IA (obrigatórios)
+              </p>
+
+              <div className="space-y-2">
+                {desafio.missoes
+                  .filter((m) => m.tipo === "treino")
+                  .map((m) => (
+                    <div
+                      key={m.id}
+                      className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3 flex flex-col md:flex-row md:items-center justify-between gap-3"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getTipoCor(
+                              m.tipo
+                            )}`}
+                          >
+                            {getTipoLabel(m.tipo)}
+                          </span>
+                          {m.concluida && (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400">
+                              <CheckCircle2 className="w-3 h-3" />
+                              concluído
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm font-semibold">{m.titulo}</p>
+                        <p className="text-[11px] md:text-xs text-slate-400">
+                          {m.descricao}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-2">
+                        <span className="text-[11px] text-emerald-300">
+                          +{m.recompensaXp} XP
+                        </span>
+                        <Button
+                          size="sm"
+                          variant={m.concluida ? "outline" : "default"}
+                          className={
+                            m.concluida
+                              ? "border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                              : "bg-emerald-600 hover:bg-emerald-700 text-xs"
+                          }
+                        >
+                          {m.concluida ? "Ver detalhes" : "Iniciar treino IA"}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* MISSÕES EXTRAS */}
+            <div className="space-y-2">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 flex items-center gap-2">
+                <Flame className="w-3 h-3 text-sky-300" />
+                Missões extras da semana
+              </p>
+
+              <div className="space-y-2">
+                {desafio.missoes
+                  .filter((m) => m.tipo === "extra")
+                  .map((m) => (
+                    <div
+                      key={m.id}
+                      className="rounded-2xl border border-slate-800 bg-slate-950/70 p-3 flex flex-col md:flex-row md:items-center justify-between gap-3"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getTipoCor(
+                              m.tipo
+                            )}`}
+                          >
+                            {getTipoLabel(m.tipo)}
+                          </span>
+                          {m.concluida && (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400">
+                              <CheckCircle2 className="w-3 h-3" />
+                              concluída
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm font-semibold">{m.titulo}</p>
+                        <p className="text-[11px] md:text-xs text-slate-400">
+                          {m.descricao}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-2">
+                        <span className="text-[11px] text-sky-300">
+                          +{m.recompensaXp} XP
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                        >
+                          Registrar como feita
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* MISSÕES BÔNUS */}
+            <div className="space-y-2">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 flex items-center gap-2">
+                <Swords className="w-3 h-3 text-violet-300" />
+                Missões bônus da batalha
+              </p>
+
+              <div className="space-y-2">
+                {desafio.missoes
+                  .filter((m) => m.tipo === "bonus")
+                  .map((m) => (
+                    <div
+                      key={m.id}
+                      className="rounded-2xl border border-violet-700/40 bg-violet-950/40 p-3 flex flex-col md:flex-row md:items-center justify-between gap-3"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getTipoCor(
+                              m.tipo
+                            )}`}
+                          >
+                            {getTipoLabel(m.tipo)}
+                          </span>
+                          {m.concluida && (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-200">
+                              <CheckCircle2 className="w-3 h-3" />
+                              bônus concluído
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm font-semibold">{m.titulo}</p>
+                        <p className="text-[11px] md:text-xs text-violet-100/80">
+                          {m.descricao}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-2">
+                        <span className="text-[11px] text-violet-200">
+                          +{m.recompensaXp} XP bônus
+                        </span>
+                        <Button
+                          size="sm"
+                          className="bg-violet-600 hover:bg-violet-700 text-xs"
+                        >
+                          Marcar como concluída
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* rodapé informativo IA */}
+        <section className="pb-10">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-[11px] md:text-xs text-slate-400">
+            <div className="flex items-start gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-400 mt-0.5" />
+              <p>
+                Este desafio foi construído 100% pela IA do Emagrify, combinando
+                seus dados de objetivo, nível, preferências e limites com
+                estratégias reais de treino. A cada semana, um novo tema e uma
+                nova batalha são gerados automaticamente.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="border-slate-700 bg-slate-900 hover:bg-slate-800 mt-1 md:mt-0"
+            >
+              Ver próximos temas sugeridos pela IA
+            </Button>
+          </div>
         </section>
       </main>
-    </motion.div>
+    </div>
   );
 }
