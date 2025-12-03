@@ -5,25 +5,27 @@ import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Check,
-  Clock,
   Dumbbell,
-  Flame,
   Loader2,
   Pause,
   Play,
-  RotateCcw,
   SkipForward,
 } from "lucide-react";
 
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
-import { useSupabase } from "@/providers/SupabaseProvider";
 
 interface TreinoExercicio {
   nome: string;
   series: string | null;
   repeticoes: string | null;
   descansoSegundos: number | null;
+
+  // campos extras que a IA pode começar a mandar:
+  grupo_muscular?: string | null;
+  equipamento?: string | null;
+  explicacao_curta?: string | null;
+  explicacao_detalhada?: string | null;
 }
 
 interface Treino {
@@ -39,50 +41,65 @@ interface Treino {
   exercicios: TreinoExercicio[];
 }
 
-type Fase = "execucao" | "descanso";
+type Phase = "preparo" | "exercicio" | "descanso" | "finalizado";
 
-export default function ModoPassoAPassoPage() {
+const PREP_TIME = 10; // segundos antes de começar o 1º exercício
+const DEFAULT_EX_TIME = 40; // tempo base para cada exercício, quando não tiver outro dado
+const DEFAULT_REST = 45; // descanso padrão quando vier null
+
+// Beep simples só para marcar fim de fase
+function playBeep() {
+  if (typeof window === "undefined") return;
+
+  try {
+    const AudioCtx =
+      (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.frequency.value = 880;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+    gain.gain.setValueAtTime(1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    osc.stop(ctx.currentTime + 0.25);
+  } catch {
+    // ignora se não der
+  }
+
+  if (navigator.vibrate) {
+    navigator.vibrate(150);
+  }
+}
+
+export default function TreinoPassoAPassoPage() {
   const params = useParams();
   const router = useRouter();
-  const { session } = useSupabase();
-
   const id = params?.id as string;
 
   const [treino, setTreino] = useState<Treino | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [indiceAtual, setIndiceAtual] = useState(0);
-  const [fase, setFase] = useState<Fase>("execucao");
-  const [segundosRestantes, setSegundosRestantes] = useState(0);
-  const [rodando, setRodando] = useState(false);
-  const [terminou, setTerminou] = useState(false);
-  const [concluindo, setConcluindo] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [phase, setPhase] = useState<Phase>("preparo");
+  const [timeLeft, setTimeLeft] = useState(PREP_TIME);
+  const [totalTime, setTotalTime] = useState(PREP_TIME);
+  const [isRunning, setIsRunning] = useState(true);
+  const [autoAdvance, setAutoAdvance] = useState(true);
 
-  // Configs simples
-  const TEMPO_PADRAO_EXERCICIO = 40; // segundos se não tiver nada definido
-  const TEMPO_PADRAO_DESCANSO = 40;
-
-  const totalExercicios = treino?.exercicios?.length || 0;
-
-  const exercicioAtual: TreinoExercicio | null = useMemo(() => {
-    if (!treino || totalExercicios === 0) return null;
-    return treino.exercicios[indiceAtual] ?? null;
-  }, [treino, indiceAtual, totalExercicios]);
-
-  const progressoTreino = useMemo(() => {
-    if (!totalExercicios) return 0;
-    return ((indiceAtual) / totalExercicios) * 100;
-  }, [indiceAtual, totalExercicios]);
-
-  // Carregar treino
+  // carregar treino
   useEffect(() => {
-    async function loadTreino() {
+    async function load() {
       try {
         setLoading(true);
         const res = await fetch(`/api/treinos/${id}`);
         const data = await res.json();
         if (!res.ok) return;
-
         setTreino(data.treino);
       } catch (err) {
         console.error(err);
@@ -91,456 +108,430 @@ export default function ModoPassoAPassoPage() {
       }
     }
 
-    if (id) loadTreino();
+    if (id) load();
   }, [id]);
 
-  // Inicializar tempo quando treino/exercício/fase mudam
+  const totalExercicios = treino?.exercicios?.length ?? 0;
+  const currentEx = useMemo(() => {
+    if (!treino || !treino.exercicios?.length) return null;
+    return treino.exercicios[currentIndex] ?? null;
+  }, [treino, currentIndex]);
+
+  const proximoEx = useMemo(() => {
+    if (!treino || !treino.exercicios?.length) return null;
+    if (currentIndex + 1 >= treino.exercicios.length) return null;
+    return treino.exercicios[currentIndex + 1];
+  }, [treino, currentIndex]);
+
+  // timer principal
   useEffect(() => {
-    if (!exercicioAtual) return;
-
-    if (fase === "execucao") {
-      setSegundosRestantes(TEMPO_PADRAO_EXERCICIO);
-    } else {
-      const descanso =
-        exercicioAtual.descansoSegundos ?? TEMPO_PADRAO_DESCANSO;
-      setSegundosRestantes(descanso);
-    }
-
-    setRodando(false); // começa pausado, user aperta play
-  }, [fase, exercicioAtual]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Timer
-  useEffect(() => {
-    if (!rodando) return;
-    if (segundosRestantes <= 0) return;
+    if (!isRunning) return;
+    if (phase === "finalizado") return;
 
     const interval = setInterval(() => {
-      setSegundosRestantes((prev) => {
-        if (prev <= 1) {
-          // chegou a zero
-          avançarAutomatico();
-          return 0;
-        }
+      setTimeLeft((prev) => {
+        if (prev <= 1) return 0;
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [rodando, segundosRestantes]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isRunning, phase]);
 
-  function avançarAutomatico() {
-    // troca exec -> descanso OU vai para próximo exercício
-    setRodando(false);
+  // quando o tempo zera, avança fase
+  useEffect(() => {
+    if (timeLeft > 0) return;
+    if (phase === "finalizado") return;
+    if (!autoAdvance) return;
 
-    setTimeout(() => {
-      setSegundosRestantes(0);
+    playBeep();
+    avancarFase();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeft]);
 
-      if (!treino || !exercicioAtual) return;
-
-      if (fase === "execucao") {
-        const descanso =
-          exercicioAtual.descansoSegundos ?? TEMPO_PADRAO_DESCANSO;
-
-        if (descanso > 0) {
-          setFase("descanso");
-          return;
-        }
-
-        // sem descanso: já pula pra próximo
-        irParaProximo();
-      } else {
-        // estava em descanso -> próximo exercício
-        irParaProximo();
-      }
-    }, 150);
+  function resetTimer(newSeconds: number) {
+    setTotalTime(newSeconds);
+    setTimeLeft(newSeconds);
   }
 
-  function irParaProximo() {
-    if (!treino) return;
-    if (indiceAtual + 1 >= totalExercicios) {
-      // acabou tudo ✨
-      setTerminou(true);
-      setRodando(false);
+  function iniciarExercicio(index: number) {
+    setCurrentIndex(index);
+    setPhase("exercicio");
+    resetTimer(DEFAULT_EX_TIME);
+    setIsRunning(true);
+  }
+
+  function avancarFase() {
+    if (!treino || !treino.exercicios?.length) return;
+
+    // 1) PREPARO -> PRIMEIRO EXERCÍCIO
+    if (phase === "preparo") {
+      iniciarExercicio(0);
       return;
     }
 
-    setIndiceAtual((i) => i + 1);
-    setFase("execucao");
-  }
+    const descansoSegundos =
+      (currentEx?.descansoSegundos ?? DEFAULT_REST) || DEFAULT_REST;
 
-  function irParaAnterior() {
-    if (!treino) return;
-    if (indiceAtual === 0) {
-      setFase("execucao");
-      setSegundosRestantes(TEMPO_PADRAO_EXERCICIO);
-      setRodando(false);
-      return;
-    }
-
-    setIndiceAtual((i) => i - 1);
-    setFase("execucao");
-  }
-
-  function resetarFase() {
-    if (!exercicioAtual) return;
-
-    if (fase === "execucao") {
-      setSegundosRestantes(TEMPO_PADRAO_EXERCICIO);
-    } else {
-      const descanso =
-        exercicioAtual.descansoSegundos ?? TEMPO_PADRAO_DESCANSO;
-      setSegundosRestantes(descanso);
-    }
-
-    setRodando(false);
-  }
-
-  async function concluirTreino() {
-    if (!session?.user) {
-      router.push("/login");
-      return;
-    }
-
-    try {
-      setConcluindo(true);
-
-      const res = await fetch("/api/treinos/concluir", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ treinoId: id }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.error || "Erro ao concluir treino.");
+    // 2) EXERCÍCIO -> DESCANSO (se tiver) OU PRÓXIMO EXERCÍCIO
+    if (phase === "exercicio") {
+      if (descansoSegundos > 0) {
+        setPhase("descanso");
+        resetTimer(descansoSegundos);
         return;
       }
+      // sem descanso, já vai para próximo passo
+      irParaProximoExercicio();
+      return;
+    }
 
-      router.push("/monitoramento");
-    } finally {
-      setConcluindo(false);
+    // 3) DESCANSO -> PRÓXIMO EXERCÍCIO OU FINALIZA
+    if (phase === "descanso") {
+      irParaProximoExercicio();
+      return;
     }
   }
 
-  function formatTime(s: number) {
-    const m = Math.floor(s / 60);
-    const resto = s % 60;
-    const mm = String(m).padStart(2, "0");
-    const ss = String(resto).padStart(2, "0");
-    return `${mm}:${ss}`;
+  function irParaProximoExercicio() {
+    if (!treino || !treino.exercicios?.length) return;
+
+    const ultimoIndex = treino.exercicios.length - 1;
+
+    if (currentIndex < ultimoIndex) {
+      const novoIndex = currentIndex + 1;
+      setCurrentIndex(novoIndex);
+      setPhase("exercicio");
+      resetTimer(DEFAULT_EX_TIME);
+      setIsRunning(true);
+    } else {
+      // acabou o treino
+      setPhase("finalizado");
+      setIsRunning(false);
+      resetTimer(0);
+    }
   }
 
-  const progressoTimer = useMemo(() => {
-    if (!exercicioAtual) return 0;
+  function pularDescansoOuIrProximo() {
+    if (phase === "descanso") {
+      irParaProximoExercicio();
+    } else {
+      avancarFase();
+    }
+  }
 
-    const total =
-      fase === "execucao"
-        ? TEMPO_PADRAO_EXERCICIO
-        : exercicioAtual.descansoSegundos ?? TEMPO_PADRAO_DESCANSO;
+  function handleReiniciarTempo() {
+    resetTimer(totalTime);
+    setIsRunning(true);
+  }
 
-    if (!total) return 0;
+  function handleSair() {
+    router.push(`/treinos/${id}`);
+  }
 
-    return ((total - segundosRestantes) / total) * 100;
-  }, [fase, exercicioAtual, segundosRestantes]);
+  function formatSegundos(seg: number) {
+    const m = Math.floor(seg / 60);
+    const s = seg % 60;
+    if (m <= 0) return `${s.toString().padStart(2, "0")}s`;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
 
-  // ESTADOS ESPECIAIS
+  // dados visuais do timer circular
+  const radius = 90;
+  const circumference = 2 * Math.PI * radius;
+  const progress = totalTime > 0 ? timeLeft / totalTime : 0;
+  const strokeDashoffset = circumference * (1 - progress);
+
+  const progressoGeral =
+    totalExercicios > 0
+      ? (currentIndex + (phase === "descanso" ? 1 : 0)) / totalExercicios
+      : 0;
+
+  // STATES DE CARREGAMENTO / ERROS
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-gray-100">
         <Header />
-        <main className="max-w-3xl mx-auto px-4 py-10">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 w-40 rounded bg-slate-800" />
-            <div className="h-40 rounded-3xl bg-slate-900" />
-            <div className="h-24 rounded-2xl bg-slate-900" />
-          </div>
+        <main className="max-w-4xl mx-auto px-4 py-10 flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
         </main>
       </div>
     );
   }
 
-  if (!treino || !exercicioAtual || !totalExercicios) {
+  if (!treino || !treino.exercicios?.length) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100">
+      <div className="min-h-screen bg-slate-950 text-gray-100">
         <Header />
-        <main className="max-w-3xl mx-auto px-4 py-10 flex flex-col gap-6">
+        <main className="max-w-4xl mx-auto px-4 py-10">
           <button
-            onClick={() => router.push(`/treinos/${id}`)}
-            className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-100"
+            onClick={handleSair}
+            className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 mb-6"
           >
             <ArrowLeft className="w-4 h-4" />
-            Voltar para detalhes do treino
+            Voltar para treino
           </button>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 text-center">
-            <p className="text-sm">
-              Não foi possível carregar os exercícios deste treino.
-            </p>
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 text-center space-y-3">
+            <p className="text-lg font-semibold">Não há exercícios neste treino.</p>
           </div>
         </main>
       </div>
     );
   }
 
-  // TELA DE TREINO CONCLUÍDO
-  if (terminou) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center px-4">
-          <div className="max-w-md w-full space-y-6 rounded-3xl border border-emerald-600/40 bg-gradient-to-b from-emerald-500/10 via-slate-900 to-slate-950 p-6 md:p-8 text-center">
-            <div className="flex justify-center mb-2">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <Check className="w-9 h-9 text-emerald-400" />
+  return (
+    <div className="min-h-screen bg-slate-950 text-gray-50">
+      <Header />
+
+      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {/* topo nav */}
+        <div className="flex items-center justify-between gap-3">
+          <button
+            onClick={handleSair}
+            className="inline-flex items-center gap-2 text-xs md:text-sm text-slate-400 hover:text-slate-200"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
+          </button>
+
+          <span className="text-[11px] md:text-xs text-slate-400">
+            {currentIndex + 1} / {totalExercicios} exercícios
+          </span>
+        </div>
+
+        {/* título + barra de progresso */}
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Dumbbell className="w-5 h-5 text-emerald-400" />
+            <div>
+              <h1 className="text-lg md:text-xl font-semibold">
+                Modo passo-a-passo
+              </h1>
+              <p className="text-xs text-slate-400 line-clamp-1">
+                {treino.titulo}
+              </p>
+            </div>
+          </div>
+
+          <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-emerald-400 via-sky-400 to-violet-400 transition-all"
+              style={{ width: `${Math.min(progressoGeral * 100, 100)}%` }}
+            />
+          </div>
+        </section>
+
+        {/* conteúdo principal */}
+        <section className="grid md:grid-cols-[1.2fr,0.9fr] gap-6 items-stretch">
+          {/* TIMER + CONTROLES */}
+          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 px-6 py-6 flex flex-col items-center justify-between gap-6">
+            <div className="text-center space-y-2">
+              <p className="text-[11px] uppercase tracking-wide text-emerald-400">
+                {phase === "preparo" && "Preparar"}
+                {phase === "exercicio" && "Executando exercício"}
+                {phase === "descanso" && "Descanso"}
+                {phase === "finalizado" && "Treino finalizado"}
+              </p>
+              <p className="text-sm font-semibold">
+                {phase === "finalizado"
+                  ? "Parabéns! Você concluiu este treino 👏"
+                  : currentEx?.nome}
+              </p>
+            </div>
+
+            {/* timer circular */}
+            <div className="relative w-56 h-56 flex items-center justify-center">
+              <svg className="w-full h-full -rotate-90">
+                <circle
+                  cx="50%"
+                  cy="50%"
+                  r={radius}
+                  className="stroke-slate-800"
+                  strokeWidth="12"
+                  fill="transparent"
+                />
+                <circle
+                  cx="50%"
+                  cy="50%"
+                  r={radius}
+                  strokeWidth="12"
+                  fill="transparent"
+                  className="transition-all duration-300 ease-linear"
+                  strokeLinecap="round"
+                  style={{
+                    stroke: "#34d399", // emerald-400
+                    strokeDasharray: circumference,
+                    strokeDashoffset,
+                  }}
+                />
+              </svg>
+
+              {/* círculo interno pulsante */}
+              <div
+                className={`absolute inset-10 rounded-full flex items-center justify-center ${
+                  phase === "finalizado"
+                    ? "bg-emerald-500/10"
+                    : "bg-slate-900/80"
+                } ${
+                  timeLeft <= 3 && phase !== "finalizado"
+                    ? "animate-pulse"
+                    : ""
+                }`}
+              >
+                <div className="text-center">
+                  <p className="text-3xl font-semibold tabular-nums">
+                    {formatSegundos(timeLeft)}
+                  </p>
+                  {phase !== "finalizado" && (
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      {phase === "exercicio"
+                        ? "Mantenha a técnica"
+                        : phase === "descanso"
+                        ? "Respire e se prepare"
+                        : "Prepare-se para começar"}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-            <h1 className="text-xl md:text-2xl font-bold">
-              Treino concluído! 🎉
-            </h1>
-            <p className="text-sm text-slate-300">
-              Você completou todos os exercícios do{" "}
-              <span className="font-semibold">{treino.titulo}</span>. Excelente
-              trabalho! Quer registrar esse treino no seu progresso?
-            </p>
 
-            <div className="grid gap-3 pt-2">
+            {/* botões de controle */}
+            <div className="flex items-center justify-center gap-3 w-full">
               <Button
-                onClick={concluirTreino}
-                disabled={concluindo}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white w-full"
+                variant="outline"
+                size="icon"
+                onClick={() => setIsRunning((v) => !v)}
+                className="border-slate-700 bg-slate-900 hover:bg-slate-800"
+                disabled={phase === "finalizado"}
               >
-                {concluindo ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                {isRunning ? (
+                  <Pause className="w-4 h-4" />
                 ) : (
-                  <>
-                    <Check className="w-4 h-4 mr-2" />
-                    Registrar treino como concluído
-                  </>
+                  <Play className="w-4 h-4" />
                 )}
               </Button>
 
               <Button
                 variant="outline"
-                onClick={() => router.push("/treinos")}
-                className="border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-100 w-full"
+                onClick={handleReiniciarTempo}
+                className="border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs md:text-sm"
+                disabled={phase === "finalizado" || totalTime === 0}
               >
-                Voltar para lista de treinos
+                Reiniciar tempo
+              </Button>
+
+              <Button
+                onClick={pularDescansoOuIrProximo}
+                className="bg-emerald-600 hover:bg-emerald-700 text-xs md:text-sm flex items-center gap-1"
+                disabled={phase === "finalizado"}
+              >
+                <SkipForward className="w-4 h-4" />
+                {phase === "descanso" ? "Pular descanso" : "Próximo"}
               </Button>
             </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
 
-  // TELA NORMAL (EM ANDAMENTO)
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
-      <Header />
-
-      <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-        {/* topo */}
-        <div className="flex items-center justify-between gap-2">
-          <button
-            onClick={() => router.push(`/treinos/${id}`)}
-            className="inline-flex items-center gap-2 text-xs md:text-sm text-slate-400 hover:text-slate-100"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Detalhes do treino
-          </button>
-
-          <span className="text-[11px] uppercase tracking-wide text-slate-400">
-            Modo passo-a-passo
-          </span>
-        </div>
-
-        {/* Card principal */}
-        <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5 md:p-6 space-y-5">
-          {/* Título + progresso geral */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-xs text-emerald-400 uppercase tracking-wide">
-                  Em andamento
-                </p>
-                <h1 className="text-lg md:text-xl font-semibold">
-                  {treino.titulo}
-                </h1>
-              </div>
-
-              <div className="hidden md:flex flex-col items-end text-xs text-slate-300">
-                <span>
-                  Exercício {indiceAtual + 1} de {totalExercicios}
-                </span>
-                <span className="text-[11px] text-slate-400">
-                  {fase === "execucao" ? "Execução" : "Descanso"}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-[11px] text-slate-400">
-                <span>
-                  Progresso do treino ({indiceAtual}/{totalExercicios})
-                </span>
-              </div>
-              <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
-                <div
-                  className="h-full bg-emerald-500 transition-all"
-                  style={{ width: `${progressoTreino}%` }}
+            <div className="flex items-center justify-between w-full text-[11px] text-slate-500">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoAdvance}
+                  onChange={(e) => setAutoAdvance(e.target.checked)}
+                  className="h-3 w-3 rounded border-slate-600 bg-slate-900"
                 />
-              </div>
+                Avançar automaticamente
+              </label>
+
+              {phase === "finalizado" && (
+                <Button
+                  size="sm"
+                  onClick={handleSair}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-xs flex items-center gap-1"
+                >
+                  <Check className="w-3 h-3" />
+                  Voltar ao treino
+                </Button>
+              )}
             </div>
           </div>
 
-          {/* EXERCÍCIO ATUAL */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-xs text-slate-400">
-                  Exercício {indiceAtual + 1} de {totalExercicios}
-                </p>
-                <h2 className="text-base md:text-lg font-semibold">
-                  {exercicioAtual.nome}
-                </h2>
-              </div>
+          {/* detalhes do exercício atual + próximo */}
+          <div className="space-y-4">
+            {/* atual */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 space-y-3">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                Exercício atual
+              </p>
 
-              <div className="flex flex-col items-end text-[11px] text-slate-400">
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-900 border border-slate-700">
-                  <Dumbbell className="w-3 h-3 text-emerald-400" />
-                  {treino.categoria || "Corpo inteiro"}
-                </span>
-              </div>
-            </div>
+              <h2 className="text-sm md:text-base font-semibold">
+                {currentEx?.nome}
+              </h2>
 
-            <div className="flex flex-wrap gap-3 text-[11px] md:text-xs text-slate-300">
-              {exercicioAtual.series && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-900 border border-slate-800">
-                  <span className="font-semibold">Séries:</span>{" "}
-                  {exercicioAtual.series}
-                </span>
-              )}
-
-              {exercicioAtual.repeticoes && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-900 border border-slate-800">
-                  <span className="font-semibold">Repetições:</span>{" "}
-                  {exercicioAtual.repeticoes}
-                </span>
-              )}
-
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-900 border border-slate-800">
-                <Clock className="w-3 h-3 text-emerald-400" />
-                {fase === "execucao" ? "Tempo de execução" : "Tempo de descanso"}
-              </span>
-            </div>
-
-            {/* TIMER */}
-            <div className="space-y-2 pt-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-300 font-medium">
-                  {formatTime(segundosRestantes)}
-                </span>
-                <span className="text-[11px] text-slate-400">
-                  {fase === "execucao" ? "Mantenha a técnica" : "Recupere o fôlego"}
-                </span>
-              </div>
-
-              <div className="h-3 rounded-full bg-slate-800 overflow-hidden">
-                <div
-                  className={`h-full transition-all ${
-                    fase === "execucao" ? "bg-emerald-500" : "bg-sky-400"
-                  }`}
-                  style={{ width: `${progressoTimer}%` }}
-                />
-              </div>
-            </div>
-
-            {/* CONTROLES */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-              <div className="flex items-center gap-2">
-                <Button
-                  size="icon"
-                  variant="outline"
-                  onClick={irParaAnterior}
-                  className="border-slate-700 bg-slate-900 hover:bg-slate-800"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                </Button>
-
-                <Button
-                  onClick={() => setRodando((r) => !r)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-6"
-                >
-                  {rodando ? (
-                    <>
-                      <Pause className="w-4 h-4 mr-2" />
-                      Pausar
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4 mr-2" />
-                      Iniciar
-                    </>
-                  )}
-                </Button>
-
-                <Button
-                  size="icon"
-                  variant="outline"
-                  onClick={resetarFase}
-                  className="border-slate-700 bg-slate-900 hover:bg-slate-800"
-                >
-                  <Clock className="w-4 h-4" />
-                </Button>
-
-                <Button
-                  size="icon"
-                  variant="outline"
-                  onClick={irParaProximo}
-                  className="border-slate-700 bg-slate-900 hover:bg-slate-800"
-                >
-                  <SkipForward className="w-4 h-4" />
-                </Button>
-              </div>
-
-              <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                <Flame className="w-3 h-3 text-amber-400" />
-                <span>
-                  Intensidade:{" "}
-                  <span className="font-semibold">
-                    {treino.nivel || "Personalizada"}
+              <div className="flex flex-wrap gap-2 text-[11px] md:text-xs text-slate-200">
+                {currentEx?.series && (
+                  <span className="px-2 py-1 rounded-full bg-slate-800/80">
+                    Séries: {currentEx.series}
                   </span>
-                </span>
+                )}
+                {currentEx?.repeticoes && (
+                  <span className="px-2 py-1 rounded-full bg-slate-800/80">
+                    Repetições: {currentEx.repeticoes}
+                  </span>
+                )}
+                {currentEx?.descansoSegundos != null && (
+                  <span className="px-2 py-1 rounded-full bg-slate-800/80">
+                    Descanso: {currentEx.descansoSegundos}s
+                  </span>
+                )}
+                {currentEx?.grupo_muscular && (
+                  <span className="px-2 py-1 rounded-full bg-slate-800/80">
+                    Grupo: {currentEx.grupo_muscular}
+                  </span>
+                )}
+                {currentEx?.equipamento && (
+                  <span className="px-2 py-1 rounded-full bg-slate-800/80">
+                    Equipamento: {currentEx.equipamento}
+                  </span>
+                )}
               </div>
+
+              <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
+                {currentEx?.explicacao_detalhada ||
+                  currentEx?.explicacao_curta ||
+                  "Mantenha a postura alinhada, controle o movimento e foque na respiração. Use o tempo como referência para executar o máximo de repetições com boa técnica."}
+              </p>
+            </div>
+
+            {/* próximo */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 space-y-2">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+                Próximo exercício
+              </p>
+
+              {proximoEx ? (
+                <>
+                  <p className="text-sm font-medium">{proximoEx.nome}</p>
+                  <div className="flex flex-wrap gap-2 text-[11px] text-slate-300">
+                    {proximoEx.series && (
+                      <span className="px-2 py-1 rounded-full bg-slate-800/80">
+                        Séries: {proximoEx.series}
+                      </span>
+                    )}
+                    {proximoEx.repeticoes && (
+                      <span className="px-2 py-1 rounded-full bg-slate-800/80">
+                        Repetições: {proximoEx.repeticoes}
+                      </span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-slate-400">
+                  Você está no último exercício deste treino.
+                </p>
+              )}
             </div>
           </div>
-        </section>
-
-        {/* INFO RÁPIDA */}
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 md:p-5 space-y-2 text-xs md:text-sm text-slate-300">
-          <div className="flex items-center gap-2 mb-1">
-            <InfoBadge />
-            <p className="font-medium">Dicas rápidas</p>
-          </div>
-          <ul className="list-disc list-inside space-y-1 text-slate-300">
-            <li>Mantenha a coluna neutra e respiração constante.</li>
-            <li>Se sentir dor forte, pare o exercício e adapte.</li>
-            <li>
-              Entre os blocos, beba água e evite ficar totalmente parado: caminhe
-              devagar pelo ambiente.
-            </li>
-          </ul>
         </section>
       </main>
     </div>
-  );
-}
-
-function InfoBadge() {
-  return (
-    <span className="inline-flex items-center justify-center rounded-full bg-slate-900 border border-slate-700 w-5 h-5 text-[11px] text-slate-300">
-      i
-    </span>
   );
 }
