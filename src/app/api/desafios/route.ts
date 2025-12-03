@@ -1,35 +1,22 @@
-// src/app/api/desafios/route.ts
-import { NextResponse } from "next/server";
-import { createServerSupabase } from "../_supabaseServer";
+import { createRouteHandlerSupabaseClient } from "@/lib/supabaseServer";
 
-export async function GET(req: Request) {
-  const supabase = createServerSupabase();
-  const { searchParams } = new URL(req.url);
-  const userId = searchParams.get("userId");
+export async function GET() {
+  const supabase = await createRouteHandlerSupabaseClient();
 
-  if (!userId) {
-    return NextResponse.json({ error: "userId é obrigatório." }, { status: 400 });
-  }
+  const hoje = new Date();
+  const semana = Number(
+    Intl.DateTimeFormat("en", { week: "numeric" }).format(hoje)
+  );
+  const ano = hoje.getFullYear();
 
-  const { data: desafios, error: errDesafios } = await supabase
-    .from("challenges")
-    .select("*")
-    .order("created_at", { ascending: true });
+  const { data: desafio } = await supabase
+    .from("desafios")
+    .select(
+      `*, missoes:desafios_missoes(*), usuario:desafios_usuario(*)`
+    )
+    .eq("semana", semana)
+    .eq("ano", ano)
+    .maybeSingle();
 
-  if (errDesafios) {
-    console.error(errDesafios);
-    return NextResponse.json({ error: errDesafios.message }, { status: 500 });
-  }
-
-  const { data: progresso, error: errProg } = await supabase
-    .from("challenge_progress")
-    .select("*")
-    .eq("user_id", userId);
-
-  if (errProg) {
-    console.error(errProg);
-    return NextResponse.json({ error: errProg.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ desafios, progresso });
+  return Response.json({ desafio });
 }
