@@ -2,165 +2,159 @@
 
 import { useEffect, useState } from "react";
 import Header from "@/components/Header";
-import { useSupabase } from "@/providers/SupabaseProvider";
-import { Crown, Medal, Trophy, Loader2 } from "lucide-react";
+import { Crown, Loader2 } from "lucide-react";
 
-interface RankUser {
+interface RankItem {
   user_id: string;
-  nome: string | null;
+  nome: string;
   xp_semanal: number;
   avatar_url: string | null;
   posicao: number;
 }
 
-export default function RankingPage() {
-  const { supabase, session } = useSupabase();
-  const [ranking, setRanking] = useState<RankUser[]>([]);
-  const [meuRank, setMeuRank] = useState<RankUser | null>(null);
+export default function RankingSemanalPage() {
+  const [ranking, setRanking] = useState<RankItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadRanking() {
-      setLoading(true);
-
-      const { data } = await supabase.rpc("ranking_semanal"); // ❗ Função que criaremos
-
-      if (data) {
-        setRanking(data);
-
-        if (session?.user?.id) {
-          const mine = data.find((u: RankUser) => u.user_id === session.user.id);
-          if (mine) setMeuRank(mine);
-        }
+    async function load() {
+      try {
+        const res = await fetch("/api/ranking");
+        const json = await res.json();
+        setRanking(json.ranking || []);
+      } catch (e) {
+        console.error("Erro ao carregar ranking:", e);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     }
 
-    loadRanking();
-  }, [session, supabase]);
+    load();
+  }, []);
+
+  function corDaPosicao(posicao: number) {
+    switch (posicao) {
+      case 1:
+        return "from-yellow-300 to-amber-500 shadow-yellow-400/30";
+      case 2:
+        return "from-gray-300 to-gray-500 shadow-gray-400/30";
+      case 3:
+        return "from-amber-600 to-orange-700 shadow-orange-500/30";
+      default:
+        return "from-slate-800 to-slate-900";
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-slate-950 text-gray-50">
       <Header />
 
-      <main className="max-w-3xl mx-auto px-5 py-8 space-y-6">
+      <main className="max-w-4xl mx-auto px-6 py-10 space-y-8">
         {/* título */}
-        <div className="flex items-center gap-2">
-          <Trophy className="w-7 h-7 text-emerald-400" />
-          <h1 className="text-2xl font-bold">Ranking Semanal</h1>
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-300 to-sky-400 bg-clip-text text-transparent">
+            Ranking Semanal
+          </h1>
+          <p className="text-sm text-slate-400">
+            Veja quem lidera esta semana com mais XP em desafios e treinos 💪
+          </p>
         </div>
 
-        <p className="text-slate-400 text-sm">
-          Os jogadores que mais ganharam XP nesta semana aparecem aqui.
-        </p>
-
+        {/* loading */}
         {loading && (
-          <div className="flex justify-center py-10">
-            <Loader2 className="w-6 h-6 text-emerald-400 animate-spin" />
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
           </div>
         )}
 
-        {/* TOPO 3 */}
-        {!loading && ranking.length >= 3 && (
-          <section className="grid grid-cols-3 gap-3 mt-6">
-            {ranking.slice(0, 3).map((u, i) => {
-              const bg =
-                i === 0
-                  ? "from-yellow-400 to-yellow-600"
-                  : i === 1
-                  ? "from-slate-300 to-slate-500"
-                  : "from-amber-700 to-amber-900";
+        {/* ranking vazio */}
+        {!loading && ranking.length === 0 && (
+          <div className="text-center text-slate-400 py-20">
+            Nenhum usuário pontuou esta semana ainda.
+          </div>
+        )}
 
-              const icon =
-                i === 0 ? Crown : i === 1 ? Medal : Trophy;
-
-              return (
-                <div
-                  key={u.user_id}
-                  className="rounded-3xl p-4 text-center flex flex-col items-center border border-slate-800 bg-slate-900"
-                >
-                  <div
-                    className={`w-16 h-16 rounded-full bg-gradient-to-br ${bg} flex items-center justify-center shadow-lg`}
-                  >
-                    {icon && (
-                      <icon.type className="w-8 h-8 text-white drop-shadow-lg" />
+        {/* ranking */}
+        <div className="space-y-4">
+          {ranking.map((r) => (
+            <div
+              key={r.user_id}
+              className={`
+                relative rounded-2xl overflow-hidden border border-slate-800 
+                bg-gradient-to-br ${corDaPosicao(r.posicao)} 
+                p-[1px] shadow-lg
+              `}
+            >
+              <div
+                className="rounded-2xl bg-slate-950/70 backdrop-blur-xl p-4 flex items-center justify-between"
+              >
+                {/* left: posição + avatar + nome */}
+                <div className="flex items-center gap-4">
+                  {/* posição */}
+                  <div className="w-10 text-center">
+                    {r.posicao <= 3 ? (
+                      <Crown
+                        className={`mx-auto ${
+                          r.posicao === 1
+                            ? "text-yellow-400"
+                            : r.posicao === 2
+                            ? "text-gray-300"
+                            : "text-orange-500"
+                        }`}
+                      />
+                    ) : (
+                      <span className="text-lg font-bold text-slate-300">
+                        {r.posicao}º
+                      </span>
                     )}
                   </div>
 
-                  <img
-                    src={u.avatar_url || "/avatar-default.png"}
-                    className="w-14 h-14 rounded-full mt-3 border border-slate-700 object-cover"
-                  />
+                  {/* avatar */}
+                  <div className="w-12 h-12 rounded-full bg-slate-800 overflow-hidden border border-slate-700 shadow">
+                    {r.avatar_url ? (
+                      <img
+                        src={r.avatar_url}
+                        alt={r.nome}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-500 text-xs">
+                        sem foto
+                      </div>
+                    )}
+                  </div>
 
-                  <p className="font-semibold mt-2 text-sm">
-                    {u.nome || "Usuário"}
-                  </p>
-                  <p className="text-emerald-400 text-xs font-semibold">
-                    {u.xp_semanal} XP
-                  </p>
-
-                  <p className="mt-1 text-xs uppercase tracking-wide text-slate-400">
-                    {i + 1}º Lugar
-                  </p>
+                  {/* nome + xp */}
+                  <div>
+                    <p className="font-semibold text-sm md:text-base">
+                      {r.nome}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {r.xp_semanal} XP nesta semana
+                    </p>
+                  </div>
                 </div>
-              );
-            })}
-          </section>
-        )}
 
-        {/* LISTA DO RANKING */}
-        <section className="space-y-3 mt-8">
-          {ranking.slice(3).map((u) => (
-            <div
-              key={u.user_id}
-              className="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-800"
-            >
-              <div className="flex items-center gap-3">
-                <p className="text-slate-400 text-sm w-6">{u.posicao}º</p>
+                {/* barra de xp */}
+                <div className="flex-1 mx-4 hidden md:block">
+                  <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-emerald-400 to-sky-400 transition-all"
+                      style={{
+                        width: `${Math.min((r.xp_semanal / 1000) * 100, 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
 
-                <img
-                  src={u.avatar_url || "/avatar-default.png"}
-                  className="w-10 h-10 rounded-full border border-slate-700 object-cover"
-                />
-
-                <div>
-                  <p className="font-medium text-sm">{u.nome || "Usuário"}</p>
-                  <p className="text-xs text-emerald-400 font-semibold">
-                    {u.xp_semanal} XP
-                  </p>
+                {/* XP final */}
+                <div className="text-right font-semibold text-emerald-300">
+                  {r.xp_semanal} XP
                 </div>
               </div>
             </div>
           ))}
-        </section>
-
-        {/* MEU RANKING (sempre aparece) */}
-        {meuRank && (
-          <section className="mt-10 rounded-xl p-4 bg-slate-900 border border-slate-800">
-            <p className="text-xs uppercase tracking-wide text-slate-400 mb-3">
-              Sua posição
-            </p>
-
-            <div className="flex items-center gap-3">
-              <p className="text-emerald-400 font-bold text-lg">
-                {meuRank.posicao}º
-              </p>
-
-              <img
-                src={meuRank.avatar_url || "/avatar-default.png"}
-                className="w-12 h-12 rounded-full object-cover border border-slate-700"
-              />
-
-              <div>
-                <p className="font-medium text-sm">{meuRank.nome}</p>
-                <p className="text-emerald-400 text-xs font-semibold">
-                  {meuRank.xp_semanal} XP nesta semana
-                </p>
-              </div>
-            </div>
-          </section>
-        )}
+        </div>
       </main>
     </div>
   );
