@@ -302,6 +302,7 @@ export default function TreinoDetalhesPage() {
 
                 <Button
                   variant="outline"
+                  onClick={() => router.push(`/treinos/${id}/passo-a-passo`)}
                   className="border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-100"
                 >
                   <PlayCircle className="w-4 h-4 mr-2" />
