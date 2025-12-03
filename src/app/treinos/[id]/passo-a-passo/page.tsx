@@ -21,7 +21,6 @@ interface TreinoExercicio {
   repeticoes: string | null;
   descansoSegundos: number | null;
 
-  // campos extras que a IA pode começar a mandar:
   grupo_muscular?: string | null;
   equipamento?: string | null;
   explicacao_curta?: string | null;
@@ -43,11 +42,11 @@ interface Treino {
 
 type Phase = "preparo" | "exercicio" | "descanso" | "finalizado";
 
-const PREP_TIME = 10; // segundos antes de começar o 1º exercício
-const DEFAULT_EX_TIME = 40; // tempo base para cada exercício, quando não tiver outro dado
-const DEFAULT_REST = 45; // descanso padrão quando vier null
+const PREP_TIME = 10;
+const DEFAULT_EX_TIME = 40;
+const DEFAULT_REST = 45;
 
-// Beep simples só para marcar fim de fase
+// beep simples
 function playBeep() {
   if (typeof window === "undefined") return;
 
@@ -68,13 +67,9 @@ function playBeep() {
     gain.gain.setValueAtTime(1, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
     osc.stop(ctx.currentTime + 0.25);
-  } catch {
-    // ignora se não der
-  }
+  } catch {}
 
-  if (navigator.vibrate) {
-    navigator.vibrate(150);
-  }
+  if (navigator.vibrate) navigator.vibrate(150);
 }
 
 export default function TreinoPassoAPassoPage() {
@@ -91,6 +86,9 @@ export default function TreinoPassoAPassoPage() {
   const [totalTime, setTotalTime] = useState(PREP_TIME);
   const [isRunning, setIsRunning] = useState(true);
   const [autoAdvance, setAutoAdvance] = useState(true);
+
+  // ⭐ ADIÇÃO: impede duplicar envio ao backend
+  const [finalizouBackend, setFinalizouBackend] = useState(false);
 
   // carregar treino
   useEffect(() => {
@@ -123,22 +121,19 @@ export default function TreinoPassoAPassoPage() {
     return treino.exercicios[currentIndex + 1];
   }, [treino, currentIndex]);
 
-  // timer principal
+  // timer
   useEffect(() => {
     if (!isRunning) return;
     if (phase === "finalizado") return;
 
     const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) return 0;
-        return prev - 1;
-      });
+      setTimeLeft((prev) => (prev <= 1 ? 0 : prev - 1));
     }, 1000);
 
     return () => clearInterval(interval);
   }, [isRunning, phase]);
 
-  // quando o tempo zera, avança fase
+  // fim de fase → avança
   useEffect(() => {
     if (timeLeft > 0) return;
     if (phase === "finalizado") return;
@@ -146,7 +141,6 @@ export default function TreinoPassoAPassoPage() {
 
     playBeep();
     avancarFase();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft]);
 
   function resetTimer(newSeconds: number) {
@@ -161,10 +155,28 @@ export default function TreinoPassoAPassoPage() {
     setIsRunning(true);
   }
 
+  // ⭐ ADIÇÃO — finalizar automaticamente no backend
+  async function concluirTreinoBackend() {
+    if (finalizouBackend) return; 
+    try {
+      setFinalizouBackend(true);
+
+      await fetch("/api/treinos/concluir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ treinoId: id }),
+      });
+
+      setTimeout(() => router.push("/monitoramento"), 800);
+
+    } catch (err) {
+      console.error("Erro ao concluir treino:", err);
+    }
+  }
+
   function avancarFase() {
     if (!treino || !treino.exercicios?.length) return;
 
-    // 1) PREPARO -> PRIMEIRO EXERCÍCIO
     if (phase === "preparo") {
       iniciarExercicio(0);
       return;
@@ -173,19 +185,16 @@ export default function TreinoPassoAPassoPage() {
     const descansoSegundos =
       (currentEx?.descansoSegundos ?? DEFAULT_REST) || DEFAULT_REST;
 
-    // 2) EXERCÍCIO -> DESCANSO (se tiver) OU PRÓXIMO EXERCÍCIO
     if (phase === "exercicio") {
       if (descansoSegundos > 0) {
         setPhase("descanso");
         resetTimer(descansoSegundos);
         return;
       }
-      // sem descanso, já vai para próximo passo
       irParaProximoExercicio();
       return;
     }
 
-    // 3) DESCANSO -> PRÓXIMO EXERCÍCIO OU FINALIZA
     if (phase === "descanso") {
       irParaProximoExercicio();
       return;
@@ -193,30 +202,26 @@ export default function TreinoPassoAPassoPage() {
   }
 
   function irParaProximoExercicio() {
-    if (!treino || !treino.exercicios?.length) return;
+    const ultimo = treino!.exercicios.length - 1;
 
-    const ultimoIndex = treino.exercicios.length - 1;
-
-    if (currentIndex < ultimoIndex) {
-      const novoIndex = currentIndex + 1;
-      setCurrentIndex(novoIndex);
+    if (currentIndex < ultimo) {
+      setCurrentIndex(currentIndex + 1);
       setPhase("exercicio");
       resetTimer(DEFAULT_EX_TIME);
       setIsRunning(true);
     } else {
-      // acabou o treino
+      // ⭐ AQUI É A ALTERAÇÃO IMPORTANTE
       setPhase("finalizado");
       setIsRunning(false);
       resetTimer(0);
+
+      concluirTreinoBackend(); // 🔥 Finaliza automaticamente
     }
   }
 
   function pularDescansoOuIrProximo() {
-    if (phase === "descanso") {
-      irParaProximoExercicio();
-    } else {
-      avancarFase();
-    }
+    if (phase === "descanso") irParaProximoExercicio();
+    else avancarFase();
   }
 
   function handleReiniciarTempo() {
@@ -235,7 +240,6 @@ export default function TreinoPassoAPassoPage() {
     return `${m}:${s.toString().padStart(2, "0")}`;
   }
 
-  // dados visuais do timer circular
   const radius = 90;
   const circumference = 2 * Math.PI * radius;
   const progress = totalTime > 0 ? timeLeft / totalTime : 0;
@@ -246,7 +250,6 @@ export default function TreinoPassoAPassoPage() {
       ? (currentIndex + (phase === "descanso" ? 1 : 0)) / totalExercicios
       : 0;
 
-  // STATES DE CARREGAMENTO / ERROS
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-gray-100">
@@ -284,7 +287,7 @@ export default function TreinoPassoAPassoPage() {
       <Header />
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* topo nav */}
+        {/* topo */}
         <div className="flex items-center justify-between gap-3">
           <button
             onClick={handleSair}
@@ -299,7 +302,7 @@ export default function TreinoPassoAPassoPage() {
           </span>
         </div>
 
-        {/* título + barra de progresso */}
+        {/* título + barra */}
         <section className="space-y-3">
           <div className="flex items-center gap-2">
             <Dumbbell className="w-5 h-5 text-emerald-400" />
@@ -321,9 +324,8 @@ export default function TreinoPassoAPassoPage() {
           </div>
         </section>
 
-        {/* conteúdo principal */}
+        {/* conteúdo */}
         <section className="grid md:grid-cols-[1.2fr,0.9fr] gap-6 items-stretch">
-          {/* TIMER + CONTROLES */}
           <div className="rounded-3xl border border-slate-800 bg-slate-900/80 px-6 py-6 flex flex-col items-center justify-between gap-6">
             <div className="text-center space-y-2">
               <p className="text-[11px] uppercase tracking-wide text-emerald-400">
@@ -359,24 +361,19 @@ export default function TreinoPassoAPassoPage() {
                   className="transition-all duration-300 ease-linear"
                   strokeLinecap="round"
                   style={{
-                    stroke: "#34d399", // emerald-400
+                    stroke: "#34d399",
                     strokeDasharray: circumference,
                     strokeDashoffset,
                   }}
                 />
               </svg>
 
-              {/* círculo interno pulsante */}
               <div
                 className={`absolute inset-10 rounded-full flex items-center justify-center ${
                   phase === "finalizado"
                     ? "bg-emerald-500/10"
                     : "bg-slate-900/80"
-                } ${
-                  timeLeft <= 3 && phase !== "finalizado"
-                    ? "animate-pulse"
-                    : ""
-                }`}
+                } ${timeLeft <= 3 && phase !== "finalizado" ? "animate-pulse" : ""}`}
               >
                 <div className="text-center">
                   <p className="text-3xl font-semibold tabular-nums">
@@ -395,7 +392,7 @@ export default function TreinoPassoAPassoPage() {
               </div>
             </div>
 
-            {/* botões de controle */}
+            {/* controles */}
             <div className="flex items-center justify-center gap-3 w-full">
               <Button
                 variant="outline"
@@ -454,9 +451,8 @@ export default function TreinoPassoAPassoPage() {
             </div>
           </div>
 
-          {/* detalhes do exercício atual + próximo */}
+          {/* detalhes exercício */}
           <div className="space-y-4">
-            {/* atual */}
             <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 space-y-3">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
                 Exercício atual
@@ -497,11 +493,10 @@ export default function TreinoPassoAPassoPage() {
               <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
                 {currentEx?.explicacao_detalhada ||
                   currentEx?.explicacao_curta ||
-                  "Mantenha a postura alinhada, controle o movimento e foque na respiração. Use o tempo como referência para executar o máximo de repetições com boa técnica."}
+                  "Mantenha a postura alinhada, controle o movimento e foque na respiração. Execute com técnica."}
               </p>
             </div>
 
-            {/* próximo */}
             <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 space-y-2">
               <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
                 Próximo exercício
