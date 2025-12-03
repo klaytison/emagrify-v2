@@ -120,14 +120,91 @@ export default function DesafiosSemanaisPage() {
   const [loading, setLoading] = useState(true);
 
   // Simula carregamento de IA
-  useEffect(() => {
-    // Aqui futuramente você troca por um fetch para a sua função de IA:
-    // fetch("/api/desafios/semana").then(...)
-    setTimeout(() => {
-      setDesafio(desafioMockIA);
+ useEffect(() => {
+  async function load() {
+    setLoading(true);
+
+    if (!session?.user?.id) return;
+
+    // 1) Verifica se já existe desafio da semana
+    const { data: desafioAtual } = await supabase
+      .from("desafios_semanais")
+      .select("*")
+      .order("criado_em", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let desafioID = desafioAtual?.id;
+
+    // 2) Se não existir => chama função IA para gerar um novo
+    if (!desafioAtual) {
+      const semana = new Date().getWeek?.() ?? 1; // caso precise, ajusto isso
+      const ano = new Date().getFullYear();
+
+      const { data: novoDesafio } = await supabase.functions.invoke(
+        "desafio-semanal",
+        {
+          body: { semana, ano },
+        }
+      );
+
+      desafioID = novoDesafio?.id;
+    }
+
+    if (!desafioID) {
       setLoading(false);
-    }, 300);
-  }, []);
+      return;
+    }
+
+    // 3) Carregar dados do desafio REAL
+    const { data: desafioInfo } = await supabase
+      .from("desafios_semanais")
+      .select("*")
+      .eq("id", desafioID)
+      .single();
+
+    const { data: missoes } = await supabase
+      .from("desafios_missoes")
+      .select("*")
+      .eq("desafio_id", desafioID);
+
+    const { data: userStatus } = await supabase
+      .from("desafios_usuario")
+      .select("*")
+      .eq("user_id", session.user.id)
+      .eq("desafio_id", desafioID)
+      .maybeSingle();
+
+    // 4) Converter para o formato que a página espera
+    setDesafio({
+      id: desafioID,
+      tema: desafioInfo.tema,
+      subtitulo: desafioInfo.subtitulo,
+      semanaTexto: `Semana ${desafioInfo.semana} · ${desafioInfo.ano}`,
+      focoPrincipal: desafioInfo.foco_principal,
+      focoSecundario: desafioInfo.foco_secundario,
+      caloriasAlvo: desafioInfo.calorias_alvo,
+      treinosAlvo: desafioInfo.treinos_alvo,
+      xpTotal: desafioInfo.xp_total,
+      xpAtual: userStatus?.xp_atual ?? 0,
+      nivelBatalha: userStatus?.nivel_batalha ?? "Bronze",
+      missoes: missoes.map((m) => ({
+        id: m.id,
+        tipo: m.tipo,
+        titulo: m.titulo,
+        descricao: m.descricao,
+        recompensaXp: m.recompensa_xp,
+        concluida: false, // depois conectamos
+        obrigatoria: m.obrigatoria,
+        ligadoATreinoId: m.treino_id,
+      })),
+    });
+
+    setLoading(false);
+  }
+
+  load();
+}, [session]);
 
   if (loading || !desafio) {
     return (
