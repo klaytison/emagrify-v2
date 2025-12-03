@@ -14,6 +14,7 @@ import {
   Clock,
   ChevronRight,
   Star,
+  Dumbbell,
 } from "lucide-react";
 
 // Tipos de dados
