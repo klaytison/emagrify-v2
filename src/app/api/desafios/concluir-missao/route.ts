@@ -4,85 +4,64 @@ import { cookies } from "next/headers";
 
 export async function POST(req: Request) {
   const supabase = createRouteHandlerClient({ cookies });
-  const body = await req.json();
 
-  const { user_id, desafio_id, missao_id } = body;
+  try {
+    // ⬅️ Agora a API realmente lê o que o front-end envia
+    const { user_id, desafio_id, missao_id } = await req.json();
 
-  if (!user_id || !desafio_id || !missao_id) {
+    if (!user_id || !desafio_id || !missao_id) {
+      return NextResponse.json(
+        { error: "Campos obrigatórios ausentes" },
+        { status: 400 }
+      );
+    }
+
+    // 1️⃣ Buscar informações da missão
+    const { data: missao, error: missaoErr } = await supabase
+      .from("desafios_missoes")
+      .select("*")
+      .eq("id", missao_id)
+      .single();
+
+    if (missaoErr || !missao) {
+      return NextResponse.json({ error: "Missão não encontrada" }, { status: 404 });
+    }
+
+    // 2️⃣ Atualizar XP do usuário
+    const { data: userStatus, error: statusErr } = await supabase
+      .from("desafios_usuario")
+      .select("*")
+      .eq("user_id", user_id)
+      .eq("desafio_id", desafio_id)
+      .maybeSingle();
+
+    if (statusErr) {
+      return NextResponse.json({ error: "Erro ao carregar status" }, { status: 500 });
+    }
+
+    const xpAtual = userStatus?.xp_atual ?? 0;
+    const novoXP = xpAtual + missao.recompensa_xp;
+
+    const { error: updateErr } = await supabase
+      .from("desafios_usuario")
+      .update({ xp_atual: novoXP })
+      .eq("user_id", user_id)
+      .eq("desafio_id", desafio_id);
+
+    if (updateErr) {
+      return NextResponse.json({ error: "Erro ao atualizar XP" }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      xp_ganho: missao.recompensa_xp,
+      xp_total: novoXP,
+    });
+  } catch (err) {
+    console.error("API concluir-missao ERROR:", err);
     return NextResponse.json(
-      { error: "Dados incompletos para concluir missão." },
-      { status: 400 }
+      { error: "Erro interno", details: err },
+      { status: 500 }
     );
   }
-
-  // buscar dados da missão
-  const { data: missao, error: errMissao } = await supabase
-    .from("desafios_missoes")
-    .select("*")
-    .eq("id", missao_id)
-    .maybeSingle();
-
-  if (errMissao || !missao) {
-    return NextResponse.json({ error: "Missão não encontrada." });
-  }
-
-  // buscar status do usuário no desafio
-  const { data: userStatus } = await supabase
-    .from("desafios_usuario")
-    .select("*")
-    .eq("user_id", user_id)
-    .eq("desafio_id", desafio_id)
-    .maybeSingle();
-
-  if (!userStatus) {
-    return NextResponse.json({
-      error: "Usuário não está vinculado ao desafio.",
-    });
-  }
-
-  const novoXP = userStatus.xp_atual + missao.recompensa_xp;
-
-  // atualizar XP
-  await supabase
-    .from("desafios_usuario")
-    .update({
-      xp_atual: novoXP,
-      atualizado_em: new Date().toISOString(),
-    })
-    .eq("user_id", user_id)
-    .eq("desafio_id", desafio_id);
-
-  // verificar obrigatórias
-  const { data: missoes } = await supabase
-    .from("desafios_missoes")
-    .select("*")
-    .eq("desafio_id", desafio_id);
-
-  const obrigatorias = missoes.filter((m) => m.obrigatoria);
-  const concluidasObrig = obrigatorias.length - 1; // atual concluída
-
-  const completouObrig = concluidasObrig + 1 === obrigatorias.length;
-
-  // verificar todas as missões
-  const total = missoes.length;
-  const concluidas = total - 1;
-
-  const completouTudo = concluidas + 1 === total;
-
-  // atualizar status gerais
-  await supabase
-    .from("desafios_usuario")
-    .update({
-      completou_treinos_obrigatorios: completouObrig,
-      completou_tudo: completouTudo,
-    })
-    .eq("user_id", user_id)
-    .eq("desafio_id", desafio_id);
-
-  return NextResponse.json({
-    ok: true,
-    xpAtual: novoXP,
-    completouObrig,
-    completouTudo,
-  });
 }
