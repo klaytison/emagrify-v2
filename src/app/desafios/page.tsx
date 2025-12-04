@@ -48,6 +48,31 @@ interface DesafioSemanalIA {
 }
 
 export default function DesafiosSemanaisPage() {
+  const { supabase, session } = useSupabase();
+
+async function concluirMissao(missaoId: string) {
+  if (!session?.user) return;
+
+  const res = await fetch("/api/desafios/concluir-missao", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: session.user.id,
+      desafio_id: desafio?.id,
+      missao_id: missaoId,
+    }),
+  });
+
+  const data = await res.json();
+
+  if (data.error) {
+    alert(data.error);
+    return;
+  }
+
+  window.location.reload();
+}
+
   const { supabase, session } = useSupabase(); // ✅ AGORA TEMOS session e supabase
 
   const [desafio, setDesafio] = useState<DesafioSemanalIA | null>(null);
@@ -613,13 +638,14 @@ export default function DesafiosSemanaisPage() {
                         <span className="text-[11px] text-sky-300">
                           +{m.recompensaXp} XP
                         </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
-                        >
-                          Registrar como feita
-                        </Button>
+<Button
+  size="sm"
+  onClick={() => concluirMissao(m.id)}
+  className="bg-emerald-600 hover:bg-emerald-700 text-xs"
+>
+  Marcar como concluída
+</Button>
+
                       </div>
                     </div>
                   ))}
@@ -667,12 +693,14 @@ export default function DesafiosSemanaisPage() {
                         <span className="text-[11px] text-violet-200">
                           +{m.recompensaXp} XP bônus
                         </span>
-                        <Button
-                          size="sm"
-                          className="bg-violet-600 hover:bg-violet-700 text-xs"
-                        >
-                          Marcar como concluída
-                        </Button>
+<Button
+  size="sm"
+  onClick={() => concluirMissao(m.id)}
+  className="bg-violet-600 hover:bg-violet-700 text-xs"
+>
+  Marcar como concluída
+</Button>
+
                       </div>
                     </div>
                   ))}
