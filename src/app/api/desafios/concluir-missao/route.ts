@@ -62,6 +62,21 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { error: "Erro interno", details: err },
       { status: 500 }
+      // 3️⃣ Registrar que a missão foi concluída
+const { error: statusInsertErr } = await supabase
+  .from("desafios_missoes_status")
+  .upsert({
+    user_id,
+    desafio_id,
+    missao_id,
+    concluida: true,
+    concluida_em: new Date(),
+  });
+
+if (statusInsertErr) {
+  console.error("Erro ao registrar missão concluída:", statusInsertErr);
+  return NextResponse.json({ error: "Erro ao registrar missão" }, { status: 500 });
+}
     );
   }
 }
