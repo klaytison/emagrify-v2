@@ -73,8 +73,6 @@ async function concluirMissao(missaoId: string) {
   window.location.reload();
 }
 
-  const { supabase, session } = useSupabase(); // ✅ AGORA TEMOS session e supabase
-
   const [desafio, setDesafio] = useState<DesafioSemanalIA | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
